@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --parchment-bg: #181a1b; /* Using dark theme base instead of white parchment to match "dark theme with parchment background" */
+  background-color: var(--parchment-bg);
+  /* Optional: we could add a subtle noise texture here later */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
