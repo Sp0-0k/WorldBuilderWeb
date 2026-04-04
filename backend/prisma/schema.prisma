@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model World {
+  id          String    @id @default(uuid()) @db.Char(36)
+  name        String
+  description String?   @db.Text
+  climate     String?
+  magicLevel  String?
+  createdAt   DateTime  @default(now()) @db.DateTime(3)
+  updatedAt   DateTime  @updatedAt @db.DateTime(3)
+
+  countries   Country[]
+  factions    Faction[]
+  party       PartyMember[]
+  pins        Pin[]
+}
+
+model Country {
+  id             String  @id @default(uuid()) @db.Char(36)
+  worldId        String  @db.Char(36)
+  name           String
+  description    String? @db.Text
+  governmentType String?
+  economy        String?
+  populationSize String?
+  createdAt      DateTime @default(now()) @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @db.DateTime(3)
+
+  world          World    @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  cities         City[]
+
+  @@index([worldId])
+}
+
+model City {
+  id             String  @id @default(uuid()) @db.Char(36)
+  countryId      String  @db.Char(36)
+  name           String
+  description    String? @db.Text
+  populationSize String?
+  mainExport     String?
+  createdAt      DateTime @default(now()) @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @db.DateTime(3)
+
+  country           Country         @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  pois              POI[]
+  strongholdOf      Faction[]       @relation("StrongholdCity")
+  keyFactionLinks   CityFaction[]
+
+  @@index([countryId])
+}
+
+model POI {
+  id               String   @id @default(uuid()) @db.Char(36)
+  cityId           String   @db.Char(36)
+  name             String
+  description      String?  @db.Text
+  dangerLevel      String?
+  keyFeature       String?
+  inventoryEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now()) @db.DateTime(3)
+  updatedAt        DateTime @updatedAt @db.DateTime(3)
+
+  city             City            @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  npcs             NPC[]
+  inventoryItems   InventoryItem[]
+
+  @@index([cityId])
+}
+
+model NPC {
+  id          String   @id @default(uuid()) @db.Char(36)
+  poiId       String   @db.Char(36)
+  name        String
+  description String?  @db.Text
+  role        String?
+  alignment   String?
+  race        String?
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  poi            POI            @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  factionLinks   FactionMember[]
+
+  @@index([poiId])
+}
+
+model InventoryItem {
+  id          String   @id @default(uuid()) @db.Char(36)
+  poiId       String   @db.Char(36)
+  name        String
+  description String?  @db.Text
+  price       String   @default("")
+  rarity      String   @default("Common")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  poi         POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@index([poiId, sortOrder])
+}
+
+model PartyMember {
+  id        String @id @default(uuid()) @db.Char(36)
+  worldId   String @db.Char(36)
+  name      String
+  level     Int    @default(1)
+  className String @default("Fighter")
+
+  world   World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@index([worldId])
+}
+
+model Pin {
+  id         String @id @default(uuid()) @db.Char(36)
+  worldId    String @db.Char(36)
+  entityType String
+  entityId   String @db.Char(36)
+
+  world      World  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+
+  @@unique([worldId, entityId])
+  @@index([worldId])
+}
+
+model Faction {
+  id               String   @id @default(uuid()) @db.Char(36)
+  worldId          String   @db.Char(36)
+  name             String
+  description      String?  @db.Text
+  powerLevel       String?
+  strongholdCityId String?  @db.Char(36)
+  createdAt        DateTime @default(now()) @db.DateTime(3)
+  updatedAt        DateTime @updatedAt @db.DateTime(3)
+
+  world            World          @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  strongholdCity   City?          @relation("StrongholdCity", fields: [strongholdCityId], references: [id], onDelete: SetNull)
+  members          FactionMember[]
+  cityLinks        CityFaction[]
+
+  @@index([worldId])
+}
+
+// Junction: NPC <-> Faction (with role)
+model FactionMember {
+  factionId String @db.Char(36)
+  npcId     String @db.Char(36)
+  role      String?
+
+  faction   Faction @relation(fields: [factionId], references: [id], onDelete: Cascade)
+  npc       NPC     @relation(fields: [npcId], references: [id], onDelete: Cascade)
+
+  @@id([factionId, npcId])
+  @@index([npcId])
+}
+
+// Junction: City <-> Faction (key factions in a city)
+model CityFaction {
+  cityId    String @db.Char(36)
+  factionId String @db.Char(36)
+
+  city      City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  faction   Faction @relation(fields: [factionId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, factionId])
+}
