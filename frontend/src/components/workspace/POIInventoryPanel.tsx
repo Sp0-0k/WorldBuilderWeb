@@ -21,7 +21,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import { generateInventory } from '../../data/AIService';
 import type { InventoryItem, PartyMember } from '../../data/mockData';
 
@@ -209,8 +209,9 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
   }, [entity.inventoryEnabled]);
 
   useEffect(() => {
-    APIService.getParty().then(setParty);
-  }, []);
+    const worldId = parentChain[0]?.id;
+    if (worldId) APIService.getParty(worldId).then(setParty);
+  }, [parentChain]);
 
   useEffect(() => {
     if (!enabled) { setLoading(false); return; }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Paper, Title, Group, Text, Badge, Stack, Button, Select, TextInput, ActionIcon } from '@mantine/core';
 import { Plus, X, Shield } from 'lucide-react';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import type { Faction } from '../../data/mockData';
 
 interface NPCFactionsPanelProps {

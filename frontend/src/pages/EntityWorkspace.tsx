@@ -3,7 +3,7 @@ import { Title, Container, SimpleGrid, Paper, Skeleton, Group, Button, Text, Mod
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { APIService } from '../data/MockDataService';
+import { dataService as APIService } from '../data/dataService';
 import type { BaseEntity, BaseEntityType } from '../data/mockData';
 import { getChildType, getParentType } from '../data/mockData';
 import { BreadcrumbHeader } from '../components/workspace/BreadcrumbHeader';
@@ -20,6 +20,7 @@ export const EntityWorkspace: React.FC = () => {
   const [children, setChildren] = useState<any[]>([]);
 
   const [parentChain, setParentChain] = useState<BaseEntity[]>([]);
+  const worldId = entity?.type === 'world' ? entity.id : (parentChain[0]?.id ?? null);
   const [loading, setLoading] = useState(true);
   const [pins, setPins] = useState<BaseEntity[]>([]);
   
@@ -74,22 +75,24 @@ export const EntityWorkspace: React.FC = () => {
   }, [type, id]);
 
   useEffect(() => {
-    APIService.getPins().then(setPins);
-  }, []);
+    if (worldId) APIService.getPins(worldId).then(setPins);
+  }, [worldId]);
 
   const handleTogglePin = async (ent: BaseEntity) => {
+    if (!worldId) return;
     const alreadyPinned = pins.some(p => p.id === ent.id);
     if (alreadyPinned) {
-      await APIService.removePin(ent.id);
+      await APIService.removePin(worldId, ent.id);
       setPins(prev => prev.filter(p => p.id !== ent.id));
     } else {
-      await APIService.addPin(ent.id);
+      await APIService.addPin(worldId, ent.type, ent.id);
       setPins(prev => [...prev, ent]);
     }
   };
 
   const handleUnpin = async (pinId: string) => {
-    await APIService.removePin(pinId);
+    if (!worldId) return;
+    await APIService.removePin(worldId, pinId);
     setPins(prev => prev.filter(p => p.id !== pinId));
   };
 
@@ -121,7 +124,6 @@ export const EntityWorkspace: React.FC = () => {
     setSaving(false);
   };
 
-  const worldId = entity?.type === 'world' ? entity.id : (parentChain[0]?.id ?? null);
   const isPinned = entity ? pins.some(p => p.id === entity.id) : false;
 
   return (

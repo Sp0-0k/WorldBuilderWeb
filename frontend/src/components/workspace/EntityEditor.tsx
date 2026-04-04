@@ -3,7 +3,7 @@ import { Paper, Title, Text, Group, Button, Stack, TextInput, Textarea } from '@
 import { Edit2, Save, X } from 'lucide-react';
 import type { BaseEntityType } from '../../data/mockData';
 import { SCHEMA_FIELDS } from '../../data/mockData';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import { POIInventoryPanel } from './POIInventoryPanel';
 import { CityFactionsPanel } from './CityFactionsPanel';
 import { NPCFactionsPanel } from './NPCFactionsPanel';

@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FantasyCard } from '../components/primitives/FantasyCard';
 import { CreateEntityModal } from '../components/workspace/CreateEntityModal';
-import { APIService } from '../data/MockDataService';
+import { dataService as APIService } from '../data/dataService';
 import type { World } from '../data/mockData';
 
 export const WorldsPage: React.FC = () => {

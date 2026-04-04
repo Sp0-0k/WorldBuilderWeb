@@ -5,7 +5,7 @@ import {
 } from '@mantine/core';
 import { Plus, Trash2, Users, Shield } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { APIService } from '../data/MockDataService';
+import { dataService as APIService } from '../data/dataService';
 import type { PartyMember } from '../data/mockData';
 import { FactionSettingsSection } from './FactionSettingsSection';
 
@@ -25,11 +25,12 @@ export const SettingsPage: React.FC<{ worldId?: string | null }> = ({ worldId })
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    APIService.getParty().then(data => {
+    if (!worldId) return;
+    APIService.getParty(worldId).then(data => {
       setMembers(data);
       setDirty(false);
     });
-  }, []);
+  }, [worldId]);
 
   const updateMember = (id: string, patch: Partial<PartyMember>) => {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m));
@@ -47,8 +48,9 @@ export const SettingsPage: React.FC<{ worldId?: string | null }> = ({ worldId })
   };
 
   const handleSave = async () => {
+    if (!worldId) return;
     setSaving(true);
-    await APIService.saveParty(members);
+    await APIService.saveParty(worldId, members);
     setSaving(false);
     setDirty(false);
   };

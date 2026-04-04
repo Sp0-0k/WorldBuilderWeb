@@ -5,7 +5,7 @@ import {
 } from '@mantine/core';
 import { Plus, Trash2, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import type { PartyMember } from '../../data/mockData';
 
 const DND_CLASSES = [
@@ -17,26 +17,27 @@ const DND_CLASSES = [
 interface PartyPanelProps {
   opened: boolean;
   onClose: () => void;
+  worldId: string | null;
 }
 
 function blankMember(): PartyMember {
   return { id: 'pm' + Math.random().toString(36).substring(2, 9), name: '', level: 1, className: 'Fighter' };
 }
 
-export const PartyPanel: React.FC<PartyPanelProps> = ({ opened, onClose }) => {
+export const PartyPanel: React.FC<PartyPanelProps> = ({ opened, onClose, worldId }) => {
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   // Load party when drawer opens
   useEffect(() => {
-    if (opened) {
-      APIService.getParty().then(data => {
+    if (opened && worldId) {
+      APIService.getParty(worldId).then(data => {
         setMembers(data);
         setDirty(false);
       });
     }
-  }, [opened]);
+  }, [opened, worldId]);
 
   const updateMember = (id: string, patch: Partial<PartyMember>) => {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m));
@@ -54,8 +55,9 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({ opened, onClose }) => {
   };
 
   const handleSave = async () => {
+    if (!worldId) return;
     setSaving(true);
-    await APIService.saveParty(members);
+    await APIService.saveParty(worldId, members);
     setSaving(false);
     setDirty(false);
     onClose();

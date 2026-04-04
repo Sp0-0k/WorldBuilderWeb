@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Text, TextInput } from '@mantine/core';
 import { Globe, Map as MapIcon, Building, MapPin, User, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import type { BaseEntity, BaseEntityType } from '../../data/mockData';
 
 interface SearchSectionProps {

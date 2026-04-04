@@ -4,7 +4,7 @@ import {
   ActionIcon, Badge, Select, Accordion, Skeleton,
 } from '@mantine/core';
 import { Plus, Trash2, Edit2, Save, X, Shield, Users } from 'lucide-react';
-import { APIService } from '../data/MockDataService';
+import { dataService as APIService } from '../data/dataService';
 import type { Faction, City, NPC } from '../data/mockData';
 
 interface Props {

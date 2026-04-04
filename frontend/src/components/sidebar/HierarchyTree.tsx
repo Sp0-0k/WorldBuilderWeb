@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader, NavLink } from '@mantine/core';
 import { Globe, Map as MapIcon, Building, MapPin, User, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { APIService } from '../../data/MockDataService';
+import { dataService as APIService } from '../../data/dataService';
 import { getChildType } from '../../data/mockData';
 import type { BaseEntity, BaseEntityType } from '../../data/mockData';
 

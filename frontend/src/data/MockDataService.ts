@@ -1,7 +1,8 @@
 import { initialData } from './mockData';
 import type { Database, BaseEntity, BaseEntityType, InventoryItem, PartyMember, World, Faction, City, NPC } from './mockData';
+import type { IDataService } from './IDataService';
 
-class DataService {
+class DataService implements IDataService {
   private data: Database;
 
   constructor() {
@@ -193,12 +194,12 @@ class DataService {
 
   // ── Party ────────────────────────────────────────────────────────────────────
 
-  async getParty(): Promise<PartyMember[]> {
+  async getParty(_worldId: string): Promise<PartyMember[]> {
     await this.delay();
     return this.data.party;
   }
 
-  async saveParty(members: PartyMember[]): Promise<PartyMember[]> {
+  async saveParty(_worldId: string, members: PartyMember[]): Promise<PartyMember[]> {
     await this.delay();
     this.data.party = members;
     this.save();
@@ -207,7 +208,7 @@ class DataService {
 
   // ── Pins ─────────────────────────────────────────────────────────────────────
 
-  async getPins(): Promise<BaseEntity[]> {
+  async getPins(_worldId: string): Promise<BaseEntity[]> {
     await this.delay();
     const all: BaseEntity[] = [
       ...this.data.worlds, ...this.data.countries,
@@ -218,17 +219,17 @@ class DataService {
       .filter((e): e is BaseEntity => e !== undefined);
   }
 
-  async addPin(id: string): Promise<void> {
+  async addPin(_worldId: string, _entityType: string, entityId: string): Promise<void> {
     await this.delay();
-    if (!this.data.pins.includes(id)) {
-      this.data.pins.push(id);
+    if (!this.data.pins.includes(entityId)) {
+      this.data.pins.push(entityId);
       this.save();
     }
   }
 
-  async removePin(id: string): Promise<void> {
+  async removePin(_worldId: string, entityId: string): Promise<void> {
     await this.delay();
-    this.data.pins = this.data.pins.filter(p => p !== id);
+    this.data.pins = this.data.pins.filter(p => p !== entityId);
     this.save();
   }
 
@@ -299,8 +300,8 @@ class DataService {
     await this.delay();
     const newFaction: Faction = {
       id: 'f' + Math.random().toString(36).substring(2, 9),
-      members: [],
       ...payload,
+      members: payload.members ?? [],
     };
     this.data.factions.push(newFaction);
     this.save();
