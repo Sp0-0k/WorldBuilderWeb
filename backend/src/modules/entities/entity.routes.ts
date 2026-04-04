@@ -2,10 +2,12 @@ import { FastifyInstance } from 'fastify'
 import { EntityRepository } from './entity.repository'
 import { EntityService } from './entity.service'
 import { EntityController } from './entity.controller'
+import { WorldsRepository } from '../worlds/worlds.repository'
 
 export async function entityRoutes(fastify: FastifyInstance) {
   const repo = new EntityRepository(fastify.prisma)
-  const service = new EntityService(repo)
+  const worldsRepo = new WorldsRepository(fastify.prisma)
+  const service = new EntityService(repo, worldsRepo)
   const controller = new EntityController(service)
 
   // GET single entity

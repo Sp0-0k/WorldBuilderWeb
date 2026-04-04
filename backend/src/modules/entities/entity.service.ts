@@ -1,4 +1,5 @@
 import { EntityRepository } from './entity.repository'
+import { WorldsRepository } from '../worlds/worlds.repository'
 import {
   EntityType,
   CreateCountryInput,
@@ -33,10 +34,18 @@ function normNPC(npc: any) {
 }
 
 export class EntityService {
-  constructor(private readonly repo: EntityRepository) {}
+  constructor(
+    private readonly repo: EntityRepository,
+    private readonly worldsRepo: WorldsRepository,
+  ) {}
 
   async getEntity(type: EntityType, id: string) {
     switch (type) {
+      case 'world': {
+        const e = await this.worldsRepo.findById(id)
+        if (!e) throw new NotFoundError(`World ${id} not found`)
+        return { ...e, type: 'world' as const }
+      }
       case 'country': {
         const e = await this.repo.findCountryById(id)
         if (!e) throw new NotFoundError(`Country ${id} not found`)
@@ -111,10 +120,13 @@ export class EntityService {
   }
 
   async updateEntity(type: EntityType, id: string, data: any) {
-    // Verify existence first
     await this.getEntity(type, id)
 
     switch (type) {
+      case 'world': {
+        const e = await this.worldsRepo.update(id, data)
+        return { ...e, type: 'world' as const }
+      }
       case 'country': {
         const input = data as UpdateCountryInput
         const e = await this.repo.updateCountry(id, input)
@@ -141,6 +153,7 @@ export class EntityService {
   async deleteEntity(type: EntityType, id: string) {
     await this.getEntity(type, id)
     switch (type) {
+      case 'world': return this.worldsRepo.delete(id)
       case 'country': return this.repo.deleteCountry(id)
       case 'city': return this.repo.deleteCity(id)
       case 'poi': return this.repo.deletePOI(id)

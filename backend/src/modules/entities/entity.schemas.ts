@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const EntityTypeSchema = z.enum(['country', 'city', 'poi', 'npc'])
+export const EntityTypeSchema = z.enum(['world', 'country', 'city', 'poi', 'npc'])
 export type EntityType = z.infer<typeof EntityTypeSchema>
 
 export const CreateCountrySchema = z.object({
