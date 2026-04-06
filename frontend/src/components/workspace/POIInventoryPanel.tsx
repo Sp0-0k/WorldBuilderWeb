@@ -444,26 +444,26 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
                             size="xs"
                             placeholder="Item name"
                             value={newItem.name}
-                            onChange={e => setNewItem(d => ({ ...d, name: e.currentTarget.value }))}
+                            onChange={e => setNewItem({ ...newItem, name: e.currentTarget.value })}
                           />
                           <TextInput
                             size="xs"
                             placeholder="Price (e.g. 5 gp)"
                             value={newItem.price}
-                            onChange={e => setNewItem(d => ({ ...d, price: e.currentTarget.value }))}
+                            onChange={e => setNewItem({ ...newItem, price: e.currentTarget.value })}
                           />
                           <Select
                             size="xs"
                             data={['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary']}
                             value={newItem.rarity}
-                            onChange={v => setNewItem(d => ({ ...d, rarity: v ?? 'Common' }))}
+                            onChange={v => setNewItem({ ...newItem, rarity: v ?? 'Common' })}
                           />
                         </Group>
                         <Textarea
                           size="xs"
                           placeholder="Brief description…"
                           value={newItem.description}
-                          onChange={e => setNewItem(d => ({ ...d, description: e.currentTarget.value }))}
+                          onChange={e => setNewItem({ ...newItem, description: e.currentTarget.value })}
                           minRows={2}
                           autosize
                         />

@@ -1,12 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --parchment-bg: #181a1b; /* Using dark theme base instead of white parchment to match "dark theme with parchment background" */
-  background-color: var(--parchment-bg);
-  /* Optional: we could add a subtle noise texture here later */
+  --parchment-bg: radial-gradient(circle at top center, #2a2e33 0%, #1a1c1d 50%, #121314 100%);
+  --surface-color: #212529;
+  --surface-hover: #2b3036;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 215, 0, 0.2);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--parchment-bg);
+  background-attachment: fixed;
+  color: #dee2e6;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: #343a40;
+  border-radius: 5px;
+  border: 2px solid rgba(0,0,0,0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #495057;
+}
+
+/* Base resets for Mantine root elements to allow our gradient thru */
+#root, .m-app-shell {
+  background: transparent !important;
 }

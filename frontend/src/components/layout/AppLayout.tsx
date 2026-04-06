@@ -12,7 +12,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, hasNavbar = fals
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 64 }}
       navbar={{
         width: 300,
         breakpoint: 'sm',
@@ -20,16 +20,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, hasNavbar = fals
       }}
       transitionDuration={300}
       transitionTimingFunction="ease"
-      padding="md"
+      padding="xl"
     >
-      <AppShell.Header style={{ backgroundColor: 'var(--mantine-color-darkGray-9)', borderBottomColor: 'var(--mantine-color-brown-9)' }}>
-        <Group h="100%" px="md">
+      <AppShell.Header style={{ 
+        backgroundColor: 'rgba(24, 26, 27, 0.7)', 
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255, 215, 0, 0.1)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+      }}>
+        <Group h="100%" px="xl">
           {hasNavbar && <Burger opened={navOpened} onClick={toggleNav} hiddenFrom="sm" size="sm" color="gold" />}
-          <Title order={3} ff="heading" c="gold.4">WorldBuilder</Title>
+          <Title 
+            order={3} 
+            ff="heading" 
+            style={{
+              background: 'linear-gradient(45deg, #fce89e, #c29707)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 2px 10px rgba(255,215,0,0.2)'
+            }}
+          >
+            WorldBuilder
+          </Title>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Main style={{ backgroundColor: 'var(--parchment-bg)', display: 'flex', flexDirection: 'column' }}>
+
+      <AppShell.Main style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}>
         {children}
       </AppShell.Main>
     </AppShell>

@@ -27,7 +27,7 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
     <AppShell.Navbar
       p="xs"
       style={{
-        backgroundColor: 'var(--mantine-color-darkGray-9)',
+        backgroundColor: 'rgba(30, 33, 36, 0.5)', backdropFilter: 'blur(12px)',
         borderRightColor: 'var(--mantine-color-brown-9)',
         display: 'flex',
         flexDirection: 'column',
@@ -117,9 +117,9 @@ export const WorkspaceSidebar: React.FC<WorkspaceSidebarProps> = ({
         title="Settings"
         size="lg"
         styles={{
-          content: { backgroundColor: 'var(--mantine-color-darkGray-9)' },
+          content: { backgroundColor: 'rgba(30, 33, 36, 0.5)', backdropFilter: 'blur(12px)' },
           header: {
-            backgroundColor: 'var(--mantine-color-darkGray-9)',
+            backgroundColor: 'rgba(30, 33, 36, 0.5)', backdropFilter: 'blur(12px)',
             borderBottomColor: 'var(--mantine-color-brown-9)',
             borderBottomWidth: 1,
             borderBottomStyle: 'solid',

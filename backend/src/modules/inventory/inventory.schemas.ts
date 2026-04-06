@@ -3,17 +3,15 @@ import { z } from 'zod'
 export const CreateInventoryItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  quantity: z.number().int().min(0).default(1),
-  weight: z.number().optional(),
-  value: z.number().optional(),
+  price: z.string().default(''),
+  rarity: z.string().default('Common'),
 })
 
 export const UpdateInventoryItemSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  quantity: z.number().int().min(0).optional(),
-  weight: z.number().optional(),
-  value: z.number().optional(),
+  price: z.string().optional(),
+  rarity: z.string().optional(),
 })
 
 export const ReorderInventorySchema = z.object({
@@ -25,9 +23,8 @@ export const ReplaceInventorySchema = z.object({
     z.object({
       name: z.string().min(1),
       description: z.string().optional(),
-      quantity: z.number().int().min(0).default(1),
-      weight: z.number().optional(),
-      value: z.number().optional(),
+      price: z.string().default(''),
+      rarity: z.string().default('Common'),
     }),
   ),
 })

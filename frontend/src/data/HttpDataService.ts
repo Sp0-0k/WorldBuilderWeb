@@ -7,9 +7,17 @@ import type {
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers ?? {});
+  const hasBody = options?.body !== undefined && options?.body !== null;
+  const isFormDataBody = typeof FormData !== 'undefined' && options?.body instanceof FormData;
+
+  if (hasBody && !isFormDataBody && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

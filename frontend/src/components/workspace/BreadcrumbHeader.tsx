@@ -1,8 +1,15 @@
-import React from 'react';
-import { Group, ActionIcon, Breadcrumbs, Anchor, Text, Tooltip } from '@mantine/core';
-import { ArrowLeft, Pin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import type { BaseEntity } from '../../data/mockData';
+import React from "react";
+import {
+  Group,
+  ActionIcon,
+  Breadcrumbs,
+  Anchor,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { ArrowLeft, Pin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import type { BaseEntity } from "../../data/mockData";
 
 interface BreadcrumbHeaderProps {
   entity: BaseEntity | null;
@@ -11,7 +18,12 @@ interface BreadcrumbHeaderProps {
   onTogglePin?: () => void;
 }
 
-export const BreadcrumbHeader: React.FC<BreadcrumbHeaderProps> = ({ entity, parentChain, isPinned, onTogglePin }) => {
+export const BreadcrumbHeader: React.FC<BreadcrumbHeaderProps> = ({
+  entity,
+  parentChain,
+  isPinned,
+  onTogglePin,
+}) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -19,23 +31,26 @@ export const BreadcrumbHeader: React.FC<BreadcrumbHeaderProps> = ({ entity, pare
       const immediateParent = parentChain[parentChain.length - 1];
       navigate(`/view/${immediateParent.type}/${immediateParent.id}`);
     } else {
-      navigate('/');
+      navigate("/worlds");
     }
   };
 
   const items = parentChain.map((p) => (
-    <Anchor 
-      key={p.id} 
+    <Anchor
+      key={p.id}
       onClick={() => navigate(`/view/${p.type}/${p.id}`)}
       c="dimmed"
-      size="sm"
-    >
+      size="sm">
       {p.name}
     </Anchor>
   ));
 
   if (entity) {
-    items.push(<Text key={entity.id} size="sm" c="gold.4" fw={500}>{entity.name}</Text>);
+    items.push(
+      <Text key={entity.id} size="sm" c="gold.4" fw={500}>
+        {entity.name}
+      </Text>,
+    );
   }
 
   return (
@@ -46,21 +61,19 @@ export const BreadcrumbHeader: React.FC<BreadcrumbHeaderProps> = ({ entity, pare
         size="lg"
         radius="md"
         onClick={handleBack}
-        aria-label="Go Back"
-      >
+        aria-label="Go Back">
         <ArrowLeft size={20} />
       </ActionIcon>
 
       {onTogglePin && (
-        <Tooltip label={isPinned ? 'Unpin' : 'Pin'} position="bottom">
+        <Tooltip label={isPinned ? "Unpin" : "Pin"} position="bottom">
           <ActionIcon
-            variant={isPinned ? 'filled' : 'subtle'}
-            color={isPinned ? 'gold' : 'gray'}
+            variant={isPinned ? "filled" : "subtle"}
+            color={isPinned ? "gold" : "gray"}
             size="lg"
             radius="md"
             onClick={onTogglePin}
-            aria-label={isPinned ? 'Unpin entity' : 'Pin entity'}
-          >
+            aria-label={isPinned ? "Unpin entity" : "Pin entity"}>
             <Pin size={16} />
           </ActionIcon>
         </Tooltip>
