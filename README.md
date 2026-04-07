@@ -1,64 +1,101 @@
 # WorldBuilderWeb
 
-WorldBuilderWeb is a full-stack D&D worldbuilding application. It helps users create and navigate a hierarchical world model (worlds, countries, cities, points of interest, NPCs), then layer in party state, factions, pins, search, and inventory.
+Build rich D&D worlds with a modern full-stack editor for locations, NPCs, factions, parties, and inventories.
 
-The project is split into:
+![WorldBuilderWeb hero screenshot](docs/images/readme/hero-overview.png)
 
-- **Frontend (`frontend/`)**: React + Vite + Mantine client that drives the editing and navigation experience.
-- **Backend (`backend/`)**: Fastify + TypeScript API using Prisma for MySQL persistence.
+## What this project is
 
-## How the app works (high-level)
+WorldBuilderWeb is a worldbuilding workspace designed around a hierarchical model:
 
-1. The backend server boots Fastify, registers security/data/error plugins, and mounts feature route modules.
-2. The frontend loads a routed workspace UI and selects a data backend at runtime:
-   - **HTTP mode** (`VITE_USE_API=true`): uses REST endpoints on the Fastify server.
-   - **Mock mode** (`VITE_USE_API=false`): uses local in-memory/localStorage-backed mock service.
-   - Login/session behavior uses a frontend-only `AuthContext` session model (UI state only), with no backend API auth enforcement.
-3. The entity workspace resolves an entity by route (`/view/:type/:id`), builds parent context, fetches children, and renders editing/creation controls.
-4. Optional AI features generate POIs, NPCs, and inventory through direct calls to OpenAI Responses API (configured via frontend environment variable).
+`World → Country → City → POI → NPC`
 
-## Core feature overviews
+The app includes:
 
-- [Backend architecture](overview/backend-architecture.md)
-- [Frontend architecture and data flow](overview/frontend-data-flow.md)
-- [Database access](overview/database-access.md)
-- [Generative AI integration](overview/generative-ai.md)
+- A polished React workspace UI for browsing and editing your world.
+- A Fastify + Prisma backend for persistent API-driven mode.
+- A mock/local mode for front-end-only workflows.
+- Optional AI-assisted generation for POIs, NPCs, and inventory.
 
-## Run modes and environment
+## Tech stack
 
-### Backend
+- **Frontend:** React, TypeScript, Vite, Mantine
+- **Backend:** Fastify, TypeScript, Prisma
+- **Database:** MySQL
 
-Primary backend configuration is centralized in environment loading and typed environment mapping.
+## Quick start
 
-- The server entry point loads dotenv and starts on the configured host/port.
-- Database connectivity is provided through Prisma and attached as a Fastify instance decorator.
+### 1) Clone and install
 
-### Frontend
+```bash
+git clone <your-repo-url>
+cd WorldBuilderWeb
 
-The frontend can run against either the real API or the mock implementation.
+cd backend && npm install
+cd ../frontend && npm install
+```
 
-- `VITE_USE_API=true` switches to `HttpDataService`.
-- `VITE_API_URL` controls the backend base URL.
-- `VITE_OPENAI_API_KEY` enables AI generation features.
+### 2) Configure environment variables
 
-Authentication note:
+Backend (`backend/.env`):
 
-- Current login/session behavior uses a frontend-only `AuthContext` session model (UI state only) and does not provide backend route protection.
+```env
+DATABASE_URL=mysql://<user>:<password>@localhost:3306/worldbuilder
+PORT=3001
+CORS_ORIGIN=http://localhost:5173
+LOG_LEVEL=info
+NODE_ENV=development
+```
 
-## Data model shape
+Frontend (`frontend/.env`):
 
-The Prisma schema models world hierarchy and adjacent systems:
+```env
+VITE_USE_API=true
+VITE_API_URL=http://localhost:3001
+# optional
+VITE_OPENAI_API_KEY=
+```
 
-- Hierarchy: `World -> Country -> City -> POI -> NPC`
-- Adjacent systems: inventory items at POI level, per-world party members, per-world pins, factions and faction membership, city-faction links.
+### 3) Initialize database (API mode)
 
-## Key references
+```bash
+cd backend
+npm run db:generate
+npm run db:migrate
+```
 
-- App assembly and route/plugin registration: [backend/src/app.ts](backend/src/app.ts#L17-L49)
-- Server startup and listen lifecycle: [backend/src/server.ts](backend/src/server.ts#L1-L17)
-- Environment configuration: [backend/src/config/env.ts](backend/src/config/env.ts#L1-L7)
-- Prisma schema root and core models: [backend/prisma/schema.prisma](backend/prisma/schema.prisma#L1-L173)
-- Frontend app routing: [frontend/src/App.tsx](frontend/src/App.tsx#L1-L22)
-- Frontend bootstrapping/theme/notifications: [frontend/src/main.tsx](frontend/src/main.tsx#L1-L19)
-- Data service mode toggle: [frontend/src/data/dataService.ts](frontend/src/data/dataService.ts#L1-L11)
-- Frontend auth context: [frontend/src/contexts/AuthContext.tsx](frontend/src/contexts/AuthContext.tsx#L1-L34)
+### 4) Run the app
+
+Backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open the frontend at `http://localhost:5173`.
+
+## Run modes
+
+- **API mode** (`VITE_USE_API=true`): frontend calls the Fastify backend.
+- **Mock mode** (`VITE_USE_API=false`): frontend uses localStorage/in-memory data (no backend required).
+
+## Documentation
+
+- **Technical overview:** [overview/technical-overview.md](overview/technical-overview.md)
+- Backend architecture: [overview/backend-architecture.md](overview/backend-architecture.md)
+- Frontend architecture and data flow: [overview/frontend-data-flow.md](overview/frontend-data-flow.md)
+- Database access: [overview/database-access.md](overview/database-access.md)
+- Generative AI integration: [overview/generative-ai.md](overview/generative-ai.md)
+
+## Notes
+
+- Current login/session behavior is frontend state only (`AuthContext`) and does not yet enforce backend API auth.
+- This repository currently uses `npm` scripts in both `frontend/` and `backend/`.
