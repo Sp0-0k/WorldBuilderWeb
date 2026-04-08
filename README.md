@@ -16,6 +16,7 @@ The app includes:
 - A Fastify + Prisma backend for persistent API-driven mode.
 - A mock/local mode for front-end-only workflows.
 - Optional AI-assisted generation for POIs, NPCs, and inventory.
+- NPC chat — roleplay conversations with NPCs using full world context, with sessions automatically summarised into persistent diary-entry memories.
 
 ## Tech stack
 

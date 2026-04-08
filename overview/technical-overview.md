@@ -62,9 +62,10 @@ Prisma models the hierarchical world and related systems:
 - Hierarchy: `World -> Country -> City -> POI -> NPC`
 - Adjacent systems:
   - Inventory items at POI level
-  - Per-world party members
+  - Per-world party members (name, level, class, race)
   - Per-world pins
   - Factions, faction memberships, and city-faction links
+  - NPC memories (diary entries persisted from chat sessions or added manually)
 
 ## Module architecture
 
@@ -84,6 +85,7 @@ Current modules under `backend/src/modules` include:
 - pins
 - factions
 - search
+- memories
 
 ## Key references
 

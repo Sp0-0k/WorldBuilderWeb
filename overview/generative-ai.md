@@ -5,6 +5,7 @@ WorldBuilderWeb includes optional AI-assisted content generation for worldbuildi
 - POIs (points of interest)
 - NPCs
 - POI inventories
+- NPC chat (multi-turn roleplay conversations with persistent memory)
 
 ## Integration model
 
@@ -30,6 +31,18 @@ For POI inventory generation specifically:
 - If inventory already exists, generation uses an explicit overwrite confirmation modal.
 - Party data from world settings is passed to generation so item rarity/pricing can be tuned to party composition and average level.
 
+## NPC chat
+
+NPCs can be conversed with directly from their page. Each conversation is a multi-turn AI roleplay session:
+
+- The NPC is given a system prompt containing their character sheet (name, race, role, alignment, description, personality), their existing memories, the POI's inventory (so they can discuss or sell items naturally), and the full ancestor context (world → country → city → POI).
+- The adventuring party's race and class composition is included so the NPC perceives the group correctly. Names are intentionally withheld — the NPC only uses a name if an adventurer introduces themselves during the conversation.
+- Chat history is ephemeral and lives only in component state. It is not persisted.
+- When the user ends the conversation, a separate summarisation call generates a 2–3 sentence diary entry written from the NPC's first-person perspective. Any names given by the adventurers during the conversation are captured in this entry. The diary entry is saved as a new `NpcMemory` record via the backend.
+- Saved memories are returned on all subsequent NPC fetches (embedded in the entity response) and are injected into future chat prompts, giving NPCs persistent recall across sessions.
+
+NPCs also have a Memories panel that lets DMs manually add, edit (including the timestamp), or delete memory entries outside of chat sessions.
+
 ## Key references
 
 - AI service overview/comments and env key note: [frontend/src/data/AIService.ts](../frontend/src/data/AIService.ts#L1-L16)
@@ -44,3 +57,8 @@ For POI inventory generation specifically:
 - POI inventory enable toggle + generation trigger: [frontend/src/components/workspace/POIInventoryPanel.tsx](../frontend/src/components/workspace/POIInventoryPanel.tsx#L210-L360)
 - Inventory overwrite confirmation + replace flow: [frontend/src/components/workspace/POIInventoryPanel.tsx](../frontend/src/components/workspace/POIInventoryPanel.tsx#L292-L332)
 - Party settings used for inventory tailoring: [frontend/src/pages/SettingsPage.tsx](../frontend/src/pages/SettingsPage.tsx#L71-L96)
+- NPC chat turn handler and system prompt: [frontend/src/data/AIService.ts](../frontend/src/data/AIService.ts#L339-L399)
+- Conversation summarisation / diary entry generation: [frontend/src/data/AIService.ts](../frontend/src/data/AIService.ts#L401-L442)
+- NPC chat panel (UI, state, send/end handlers): [frontend/src/components/workspace/NPCChatPanel.tsx](../frontend/src/components/workspace/NPCChatPanel.tsx)
+- NPC memories panel (view/edit/add/delete): [frontend/src/components/workspace/NPCMemoriesPanel.tsx](../frontend/src/components/workspace/NPCMemoriesPanel.tsx)
+- Memories backend module: [backend/src/modules/memories/](../backend/src/modules/memories/)
