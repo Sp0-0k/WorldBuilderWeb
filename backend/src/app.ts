@@ -13,6 +13,7 @@ import { partyRoutes } from './modules/party/party.routes'
 import { pinsRoutes } from './modules/pins/pins.routes'
 import { factionsRoutes } from './modules/factions/factions.routes'
 import { searchRoutes } from './modules/search/search.routes'
+import { memoriesRoutes } from './modules/memories/memories.routes'
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -45,6 +46,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(pinsRoutes)
   await fastify.register(factionsRoutes)
   await fastify.register(searchRoutes)
+  await fastify.register(memoriesRoutes)
 
   return fastify
 }

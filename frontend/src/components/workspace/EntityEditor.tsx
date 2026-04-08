@@ -7,6 +7,8 @@ import { dataService as APIService } from '../../data/dataService';
 import { POIInventoryPanel } from './POIInventoryPanel';
 import { CityFactionsPanel } from './CityFactionsPanel';
 import { NPCFactionsPanel } from './NPCFactionsPanel';
+import { NPCMemoriesPanel } from './NPCMemoriesPanel';
+import { NPCChatPanel } from './NPCChatPanel';
 
 interface EntityEditorProps {
   entity: any;
@@ -108,7 +110,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
           )}
 
           <Group grow align="flex-start">
-            {SCHEMA_FIELDS[entity.type as BaseEntityType]?.map(key => {
+            {SCHEMA_FIELDS[entity.type as BaseEntityType]?.filter(key => key !== 'personality').map(key => {
               const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
               const val = draft[key] || '';
               const shouldRenderView = !isEditing && entity[key] && entity[key].toString().trim() !== '';
@@ -139,6 +141,27 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
               return null;
             })}
           </Group>
+
+          {SCHEMA_FIELDS[entity.type as BaseEntityType]?.includes('personality') && (
+            isEditing ? (
+              <Textarea
+                key="personality"
+                label="Personality & Quirks"
+                value={draft['personality'] || ''}
+                onChange={e => {
+                  const newVal = e.currentTarget.value;
+                  setDraft((prev: any) => ({ ...prev, personality: newVal }));
+                }}
+                minRows={3}
+                autosize
+              />
+            ) : (entity['personality'] && entity['personality'].toString().trim() !== '') ? (
+              <div key="personality">
+                <Text size="xs" tt="uppercase" c="dimmed" fw={600}>Personality & Quirks</Text>
+                <Text>{entity['personality']}</Text>
+              </div>
+            ) : null
+          )}
         </Stack>
       </Paper>
 
@@ -166,6 +189,22 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
           isEditing={isEditing}
           worldId={parentChain[0].id}
           onEntityUpdate={onSave}
+        />
+      )}
+
+      {entity.type === 'npc' && (
+        <NPCMemoriesPanel
+          entity={entity}
+          isEditing={isEditing}
+          onMemoriesChange={onSave}
+        />
+      )}
+
+      {entity.type === 'npc' && (
+        <NPCChatPanel
+          entity={entity}
+          parentChain={parentChain}
+          onMemoryAdded={onSave}
         />
       )}
     </>

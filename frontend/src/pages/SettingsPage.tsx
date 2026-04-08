@@ -15,8 +15,14 @@ const DND_CLASSES = [
   'Sorcerer', 'Warlock', 'Wizard', 'Custom',
 ];
 
+const DND_RACES = [
+  'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Half-Elf', 'Half-Orc',
+  'Halfling', 'Human', 'Tiefling', 'Aasimar', 'Goliath', 'Tabaxi',
+  'Kenku', 'Lizardfolk', 'Tortle', 'Custom',
+];
+
 function blankMember(): PartyMember {
-  return { id: 'pm' + Math.random().toString(36).substring(2, 9), name: '', level: 1, className: 'Fighter' };
+  return { id: 'pm' + Math.random().toString(36).substring(2, 9), name: '', level: 1, className: 'Fighter', race: '' };
 }
 
 export const SettingsPage: React.FC<{ worldId?: string | null }> = ({ worldId }) => {
@@ -83,8 +89,9 @@ export const SettingsPage: React.FC<{ worldId?: string | null }> = ({ worldId })
         <Accordion.Panel>
           <Stack gap="md">
             <Text size="sm" c="dimmed">
-              Party details are used when generating shop inventories — the AI will tailor item
-              selection, pricing, and rarity to suit your party's level and composition.
+              Party details are used when generating shop inventories and NPC conversations — the AI
+              will tailor item selection to your party's level, and NPCs will perceive the group by
+              race and class (never by name, unless introduced in conversation).
             </Text>
 
             <Divider color="brown.9" />
@@ -122,13 +129,22 @@ export const SettingsPage: React.FC<{ worldId?: string | null }> = ({ worldId })
                         style={{ maxWidth: 80 }}
                       />
                     </Group>
-                    <Select
-                      placeholder="Class"
-                      size="sm"
-                      data={DND_CLASSES}
-                      value={member.className}
-                      onChange={v => updateMember(member.id, { className: v ?? 'Fighter' })}
-                    />
+                    <Group grow>
+                      <Select
+                        placeholder="Class"
+                        size="sm"
+                        data={DND_CLASSES}
+                        value={member.className}
+                        onChange={v => updateMember(member.id, { className: v ?? 'Fighter' })}
+                      />
+                      <Select
+                        placeholder="Race"
+                        size="sm"
+                        data={DND_RACES}
+                        value={member.race || null}
+                        onChange={v => updateMember(member.id, { race: v ?? '' })}
+                      />
+                    </Group>
                     {index < members.length - 1 && <Divider mt="xs" color="brown.9" />}
                   </Stack>
                 </motion.div>

@@ -83,13 +83,27 @@ model NPC {
   role        String?
   alignment   String?
   race        String?
+  personality String?  @db.Text
   createdAt   DateTime @default(now()) @db.DateTime(3)
   updatedAt   DateTime @updatedAt @db.DateTime(3)
 
-  poi            POI            @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  poi            POI             @relation(fields: [poiId], references: [id], onDelete: Cascade)
   factionLinks   FactionMember[]
+  memories       NpcMemory[]
 
   @@index([poiId])
+}
+
+model NpcMemory {
+  id        String   @id @default(uuid()) @db.Char(36)
+  npcId     String   @db.Char(36)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @updatedAt @db.DateTime(3)
+
+  npc       NPC      @relation(fields: [npcId], references: [id], onDelete: Cascade)
+
+  @@index([npcId])
 }
 
 model InventoryItem {
@@ -109,11 +123,12 @@ model InventoryItem {
 }
 
 model PartyMember {
-  id        String @id @default(uuid()) @db.Char(36)
-  worldId   String @db.Char(36)
+  id        String  @id @default(uuid()) @db.Char(36)
+  worldId   String  @db.Char(36)
   name      String
-  level     Int    @default(1)
-  className String @default("Fighter")
+  level     Int     @default(1)
+  className String  @default("Fighter")
+  race      String  @default("")
 
   world   World   @relation(fields: [worldId], references: [id], onDelete: Cascade)
 

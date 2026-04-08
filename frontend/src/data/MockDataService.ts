@@ -1,5 +1,5 @@
 import { initialData } from './mockData';
-import type { Database, BaseEntity, BaseEntityType, InventoryItem, PartyMember, World, Faction, City, NPC } from './mockData';
+import type { Database, BaseEntity, BaseEntityType, InventoryItem, NPCMemory, PartyMember, World, Faction, City, NPC } from './mockData';
 import type { IDataService } from './IDataService';
 
 class DataService implements IDataService {
@@ -17,6 +17,11 @@ class DataService implements IDataService {
         party: parsed.party ?? [],
         pins: parsed.pins ?? [],
         factions: parsed.factions ?? [],
+        npcs: (parsed.npcs ?? []).map((n: any) => ({
+          personality: '',
+          memories: [],
+          ...n,
+        })),
       };
     } else {
       this.data = initialData;
@@ -73,7 +78,7 @@ class DataService implements IDataService {
       country: { governmentType: '', economy: '', populationSize: '' },
       city: { populationSize: '', mainExport: '' },
       poi: { dangerLevel: '', keyFeature: '' },
-      npc: { role: '', alignment: '', race: '' }
+      npc: { role: '', alignment: '', race: '', personality: '', memories: [] }
     };
 
     const newEntity = {
@@ -363,6 +368,42 @@ class DataService implements IDataService {
         factionIds: (this.data.npcs[nIdx].factionIds ?? []).filter(fid => fid !== factionId),
       };
     }
+    this.save();
+  }
+
+  // ── NPC Memories ─────────────────────────────────────────────────────────────
+
+  async addNPCMemory(npcId: string, content: string): Promise<NPCMemory> {
+    await this.delay();
+    const npc = this.data.npcs.find(n => n.id === npcId);
+    if (!npc) throw new Error('NPC not found');
+    const memory: NPCMemory = {
+      id: 'mem' + Math.random().toString(36).substring(2, 9),
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    npc.memories = [...(npc.memories ?? []), memory];
+    this.save();
+    return memory;
+  }
+
+  async updateNPCMemory(npcId: string, memoryId: string, content: string, createdAt?: string): Promise<NPCMemory> {
+    await this.delay();
+    const npc = this.data.npcs.find(n => n.id === npcId);
+    if (!npc) throw new Error('NPC not found');
+    const mem = (npc.memories ?? []).find(m => m.id === memoryId);
+    if (!mem) throw new Error('Memory not found');
+    mem.content = content;
+    if (createdAt) mem.createdAt = createdAt;
+    this.save();
+    return mem;
+  }
+
+  async deleteNPCMemory(npcId: string, memoryId: string): Promise<void> {
+    await this.delay();
+    const npc = this.data.npcs.find(n => n.id === npcId);
+    if (!npc) throw new Error('NPC not found');
+    npc.memories = (npc.memories ?? []).filter(m => m.id !== memoryId);
     this.save();
   }
 

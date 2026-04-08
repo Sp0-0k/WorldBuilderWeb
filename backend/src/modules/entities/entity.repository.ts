@@ -111,14 +111,14 @@ export class EntityRepository {
   async findNPCById(id: string) {
     return this.prisma.nPC.findUnique({
       where: { id },
-      include: { factionLinks: { select: { factionId: true } } },
+      include: { factionLinks: { select: { factionId: true } }, memories: { orderBy: { createdAt: 'asc' } } },
     })
   }
 
   async findNPCsByPOIId(poiId: string) {
     return this.prisma.nPC.findMany({
       where: { poiId },
-      include: { factionLinks: { select: { factionId: true } } },
+      include: { factionLinks: { select: { factionId: true } }, memories: { orderBy: { createdAt: 'asc' } } },
       orderBy: { createdAt: 'asc' },
     })
   }
@@ -127,7 +127,7 @@ export class EntityRepository {
     const { parentId, ...rest } = data
     return this.prisma.nPC.create({
       data: { ...rest, poiId: parentId },
-      include: { factionLinks: { select: { factionId: true } } },
+      include: { factionLinks: { select: { factionId: true } }, memories: { orderBy: { createdAt: 'asc' } } },
     })
   }
 
@@ -135,7 +135,7 @@ export class EntityRepository {
     return this.prisma.nPC.update({
       where: { id },
       data,
-      include: { factionLinks: { select: { factionId: true } } },
+      include: { factionLinks: { select: { factionId: true } }, memories: { orderBy: { createdAt: 'asc' } } },
     })
   }
 

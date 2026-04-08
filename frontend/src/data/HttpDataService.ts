@@ -1,7 +1,7 @@
 import type { IDataService } from './IDataService';
 import type {
   BaseEntity, BaseEntityType, City, NPC,
-  Faction, InventoryItem, PartyMember, World,
+  Faction, InventoryItem, NPCMemory, PartyMember, World,
 } from './mockData';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
@@ -113,7 +113,15 @@ export class HttpDataService implements IDataService {
   // ── Pins ─────────────────────────────────────────────────────────────────────
 
   async getPins(worldId: string): Promise<BaseEntity[]> {
-    return req(`/worlds/${worldId}/pins`);
+    const pins = await req<{ id: string; entityId: string; entityType: BaseEntityType; name: string | null }[]>(
+      `/worlds/${worldId}/pins`
+    );
+    return pins.map(pin => ({
+      id: pin.entityId,
+      type: pin.entityType,
+      name: pin.name ?? '',
+      description: '',
+    }));
   }
 
   addPin(worldId: string, entityType: BaseEntityType, entityId: string): Promise<void> {
@@ -162,5 +170,19 @@ export class HttpDataService implements IDataService {
 
   getNPCsForWorld(worldId: string): Promise<NPC[]> {
     return req(`/worlds/${worldId}/npcs`);
+  }
+
+  // ── NPC Memories ─────────────────────────────────────────────────────────────
+
+  addNPCMemory(npcId: string, content: string): Promise<NPCMemory> {
+    return post(`/npcs/${npcId}/memories`, { content });
+  }
+
+  updateNPCMemory(_npcId: string, memoryId: string, content: string, createdAt?: string): Promise<NPCMemory> {
+    return patch(`/memories/${memoryId}`, { content, ...(createdAt ? { createdAt } : {}) });
+  }
+
+  deleteNPCMemory(_npcId: string, memoryId: string): Promise<void> {
+    return del(`/memories/${memoryId}`);
   }
 }

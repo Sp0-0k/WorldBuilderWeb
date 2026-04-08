@@ -333,3 +333,123 @@ Generate an inventory of 5–8 items that would realistically be found or sold a
   const parsed = JSON.parse(raw) as { items: GeneratedInventoryItem[] };
   return parsed.items;
 }
+
+// ── NPC Chat ─────────────────────────────────────────────────────────────────
+
+export async function chatWithNPCTurn(
+  npc: any,
+  history: { role: 'user' | 'assistant'; content: string }[],
+  parentChain: any[],
+  inventory: InventoryItem[] = [],
+  party: PartyMember[] = [],
+): Promise<string> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+  if (!apiKey) throw new Error('OpenAI API key not found.');
+
+  const memoriesList = (npc.memories ?? [])
+    .map((m: any) => `- ${m.content}`)
+    .join('\n') || 'None yet.';
+
+  const inventoryBlock = inventory.length > 0
+    ? `\n### Location Inventory\nThese are the items available at your location. You know about them and can discuss, sell, or reference them naturally.\n${inventory.map(i => `- ${i.name} (${i.rarity}, ${i.price}): ${i.description}`).join('\n')}`
+    : '';
+
+  const partyBlock = party.length > 0
+    ? `\n### The Party\nYou are speaking with a group of adventurers, not a single person. From what you can observe, the group includes:\n${party.map(m => `- A ${m.race || 'unknown-race'} ${m.className}`).join('\n')}\nYou do not know any of their names unless they tell you during conversation. React to them as a group. If an adventurer gives you a name, use it — but do not invent names for them.`
+    : '';
+
+  const systemPrompt = `You are roleplaying as ${npc.name}, a character in a fantasy world. \
+Stay in character at all times. Speak and respond exactly as this character would, using their \
+voice, mannerisms, and knowledge. Do not break character or acknowledge being an AI. \
+Keep your response short and conversational. Avoid lists and other non-prose. \
+The person you are having a conversation with is talking with you face to face. \
+Never ask more than one question at once. Do not needlessly reference names of locations or your own name. \
+Do not use flowery language unless your character has that as a personality or quirk. When asked simple questions
+answer simply. Do not use modern expressions or terms.
+
+### Character
+Name: ${npc.name}
+Race: ${npc.race || 'Unknown'}
+Role: ${npc.role || 'Unknown'}
+Alignment: ${npc.alignment || 'Unknown'}
+Description: ${npc.description || ''}
+Personality & Quirks: ${npc.personality || 'Not specified.'}
+
+### Memories (things this character remembers)
+${memoriesList}
+${inventoryBlock}
+${partyBlock}
+${buildContextBlock({ entity: parentChain[parentChain.length - 1], parentChain: parentChain.slice(0, -1) })}`;
+
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-5.4-nano',
+      input: [
+        { role: 'system', content: systemPrompt },
+        ...history,
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  showUsageNotification('NPC chat', data.usage);
+
+  const text: string = data?.output?.[0]?.content?.[0]?.text;
+  if (!text) throw new Error('Unexpected response shape from OpenAI Responses API.');
+  return text;
+}
+
+export async function summarizeConversation(
+  npc: any,
+  history: { role: 'user' | 'assistant'; content: string }[],
+): Promise<string> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+  if (!apiKey) throw new Error('OpenAI API key not found.');
+
+  const transcript = history
+    .map(m => `${m.role === 'user' ? 'Adventurer' : npc.name}: ${m.content}`)
+    .join('\n');
+
+  const systemPrompt = `You are ${npc.name}. The transcript below is a conversation between you and a group of adventurers. \
+Write a 2–3 sentence diary entry strictly from ${npc.name}'s own first-person perspective — what YOU said, felt, or learned. \
+Do not write from the adventurers' point of view. \
+If any adventurer gave you their name during the conversation (even if it might be a fake name), include it — record names exactly as they were given to you. \
+Be specific. Write only the diary entry — no title, no preamble.`;
+
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-5.4-nano',
+      input: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: transcript },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  showUsageNotification('conversation summary', data.usage);
+
+  const text: string = data?.output?.[0]?.content?.[0]?.text;
+  if (!text) throw new Error('Unexpected response shape from OpenAI Responses API.');
+  return text;
+}

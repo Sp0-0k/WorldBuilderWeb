@@ -59,6 +59,7 @@ export const CreateNPCSchema = z.object({
   role: z.string().optional(),
   alignment: z.string().optional(),
   race: z.string().optional(),
+  personality: z.string().optional(),
 })
 
 export const UpdateNPCSchema = z.object({
@@ -67,6 +68,7 @@ export const UpdateNPCSchema = z.object({
   role: z.string().optional(),
   alignment: z.string().optional(),
   race: z.string().optional(),
+  personality: z.string().optional(),
 })
 
 export type CreateCountryInput = z.infer<typeof CreateCountrySchema>

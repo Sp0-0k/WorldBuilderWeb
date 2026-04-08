@@ -1,6 +1,6 @@
 import type {
   BaseEntity, BaseEntityType, City, NPC,
-  Faction, InventoryItem, PartyMember, World,
+  Faction, InventoryItem, NPCMemory, PartyMember, World,
 } from './mockData';
 
 /**
@@ -48,4 +48,9 @@ export interface IDataService {
   removeNPCFromFaction(factionId: string, npcId: string): Promise<void>;
   getCitiesForWorld(worldId: string): Promise<City[]>;
   getNPCsForWorld(worldId: string): Promise<NPC[]>;
+
+  // ── NPC Memories ─────────────────────────────────────────────────────────────
+  addNPCMemory(npcId: string, content: string): Promise<NPCMemory>;
+  updateNPCMemory(npcId: string, memoryId: string, content: string, createdAt?: string): Promise<NPCMemory>;
+  deleteNPCMemory(npcId: string, memoryId: string): Promise<void>;
 }

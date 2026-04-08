@@ -27,14 +27,22 @@ export const SCHEMA_FIELDS: Record<BaseEntityType, string[]> = {
   country: ['governmentType', 'economy', 'populationSize'],
   city: ['populationSize', 'mainExport'],
   poi: ['dangerLevel', 'keyFeature'],
-  npc: ['role', 'alignment', 'race']
+  npc: ['role', 'alignment', 'race', 'personality']
 };
+
+export interface NPCMemory {
+  id: string;
+  content: string;
+  createdAt: string; // ISO 8601 string
+}
 
 export interface NPC extends BaseEntity {
   type: 'npc';
   role: string;
   alignment: string;
   race: string;
+  personality?: string;
+  memories?: NPCMemory[];
   parentId: string;
   factionIds?: string[];
 }
@@ -74,6 +82,7 @@ export interface PartyMember {
   name: string;
   level: number;
   className: string;
+  race: string;
 }
 
 export interface InventoryItem {
