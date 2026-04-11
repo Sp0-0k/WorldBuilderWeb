@@ -73,7 +73,7 @@ export const HierarchyTree: React.FC<HierarchyTreeProps> = ({ worldId, currentEn
     }
 
     let next = new Map(nodesRef.current);
-    let n = next.get(id);
+    const n = next.get(id);
     if (n) {
       next.set(id, { ...n, isLoading: true });
       nodesRef.current = next;

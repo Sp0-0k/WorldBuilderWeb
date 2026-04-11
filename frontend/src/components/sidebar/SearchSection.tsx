@@ -25,10 +25,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ worldId }) => {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!query.trim()) return;
     debounceRef.current = setTimeout(async () => {
       const found = await APIService.searchEntities(worldId, query);
       setResults(found);
@@ -37,6 +34,8 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ worldId }) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, worldId]);
+
+  const displayResults = query.trim() ? results : [];
 
   return (
     <>
@@ -54,10 +53,10 @@ export const SearchSection: React.FC<SearchSectionProps> = ({ worldId }) => {
           },
         }}
       />
-      {query.trim() && results.length === 0 && (
+      {query.trim() && displayResults.length === 0 && (
         <Text size="xs" c="dimmed" fs="italic" mt="xs" px="xs">No results</Text>
       )}
-      {results.map(entity => (
+      {displayResults.map(entity => (
         <NavLink
           key={entity.id}
           label={entity.name}

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dataService as APIService } from '../data/dataService';
-import type { BaseEntity, BaseEntityType } from '../data/mockData';
+import type { AnyEntity, BaseEntity, BaseEntityType } from '../data/mockData';
 import { getChildType, getParentType } from '../data/mockData';
 import { BreadcrumbHeader } from '../components/workspace/BreadcrumbHeader';
 import { FantasyCard } from '../components/primitives/FantasyCard';
@@ -16,8 +16,8 @@ export const EntityWorkspace: React.FC = () => {
   const { type, id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
 
-  const [entity, setEntity] = useState<any | null>(null);
-  const [children, setChildren] = useState<any[]>([]);
+  const [entity, setEntity] = useState<AnyEntity | null>(null);
+  const [children, setChildren] = useState<BaseEntity[]>([]);
 
   const [parentChain, setParentChain] = useState<BaseEntity[]>([]);
   const worldId = entity?.type === 'world' ? entity.id : (parentChain[0]?.id ?? null);
@@ -27,7 +27,7 @@ export const EntityWorkspace: React.FC = () => {
   const [modalOpened, setModalOpened] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [deletingChild, setDeletingChild] = useState<any | null>(null);
+  const [deletingChild, setDeletingChild] = useState<BaseEntity | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchWorkspace = async () => {
@@ -38,12 +38,12 @@ export const EntityWorkspace: React.FC = () => {
 
     if (data) {
       // Build Parent Chain
-      let chain: any[] = [];
-      let curr = data;
+      const chain: BaseEntity[] = [];
+      let curr: BaseEntity = data;
       let cType = type;
-      
-      while (curr && curr.parentId) {
-        const pType: any = getParentType(cType);
+
+      while (curr && (curr as Record<string, unknown>)['parentId']) {
+        const pType = getParentType(cType);
         if(!pType) break;
         const parentData = await APIService.getEntityByRoute(pType as BaseEntityType, curr.parentId);
         if (parentData) {
@@ -111,7 +111,7 @@ export const EntityWorkspace: React.FC = () => {
     setIsDeleting(false);
   };
 
-  const handleCreateChild = async (data: any) => {
+  const handleCreateChild = async (data: Record<string, string>) => {
     if (!childType || !entity) return;
     setSaving(true);
     try {
@@ -171,7 +171,7 @@ export const EntityWorkspace: React.FC = () => {
                 onTogglePin={() => handleTogglePin(entity)}
               />
               
-              <EntityEditor entity={entity} parentChain={parentChain} onEditingChange={setIsEditing} onSave={(updated: any) => {
+              <EntityEditor entity={entity} parentChain={parentChain} onEditingChange={setIsEditing} onSave={(updated: AnyEntity) => {
                 setEntity(updated);
               }} />
 

@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Paper, Title, Group, Text, Badge, Stack, MultiSelect, Button } from '@mantine/core';
 import { Shield } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
-import type { Faction } from '../../data/mockData';
+import type { City, Faction } from '../../data/mockData';
 
 interface CityFactionsPanelProps {
-  entity: any;
+  entity: City;
   isEditing: boolean;
   worldId: string;
-  onEntityUpdate: (updated: any) => void;
+  onEntityUpdate: (updated: City) => void;
 }
 
 export const CityFactionsPanel: React.FC<CityFactionsPanelProps> = ({
@@ -24,8 +24,10 @@ export const CityFactionsPanel: React.FC<CityFactionsPanelProps> = ({
   }, [worldId]);
 
   useEffect(() => {
-    setKeyFactionIds(entity.keyFactionIds ?? []);
-    setDirty(false);
+    queueMicrotask(() => {
+      setKeyFactionIds(entity.keyFactionIds ?? []);
+      setDirty(false);
+    });
   }, [entity.id]);
 
   const handleSave = async () => {

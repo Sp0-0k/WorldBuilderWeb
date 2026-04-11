@@ -77,6 +77,8 @@ export interface World extends BaseEntity {
   magicLevel: string;
 }
 
+export type AnyEntity = World | Country | City | POI | NPC;
+
 export interface PartyMember {
   id: string;
   name: string;

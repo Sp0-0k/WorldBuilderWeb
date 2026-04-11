@@ -4,19 +4,19 @@ import { notifications } from '@mantine/notifications';
 import { Wand2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SCHEMA_FIELDS } from '../../data/mockData';
-import type { BaseEntityType } from '../../data/mockData';
+import type { AnyEntity, BaseEntityType } from '../../data/mockData';
 import { generateEntity } from '../../data/AIService';
 
 interface EntityContext {
-  entity: any;
-  parentChain: any[];
+  entity: AnyEntity;
+  parentChain: AnyEntity[];
 }
 
 interface CreateEntityModalProps {
   opened: boolean;
   onClose: () => void;
   entityType: string;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, string>) => void;
   loading?: boolean;
   /** Full ancestor context passed down from EntityWorkspace for AI generation. */
   context?: EntityContext;
@@ -102,8 +102,8 @@ export const CreateEntityModal: React.FC<CreateEntityModalProps> = ({
         color: 'gold',
         icon: <Wand2 size={16} />,
       });
-    } catch (err: any) {
-      setAiError(err?.message ?? 'Generation failed. Check your API key and try again.');
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : 'Generation failed. Check your API key and try again.');
     }
     setGenerating(false);
   };

@@ -1,5 +1,5 @@
 import { initialData } from './mockData';
-import type { Database, BaseEntity, BaseEntityType, InventoryItem, NPCMemory, PartyMember, World, Faction, City, NPC } from './mockData';
+import type { AnyEntity, Database, BaseEntity, BaseEntityType, InventoryItem, NPCMemory, PartyMember, World, Faction, City, NPC } from './mockData';
 import type { IDataService } from './IDataService';
 
 class DataService implements IDataService {
@@ -17,7 +17,7 @@ class DataService implements IDataService {
         party: parsed.party ?? [],
         pins: parsed.pins ?? [],
         factions: parsed.factions ?? [],
-        npcs: (parsed.npcs ?? []).map((n: any) => ({
+        npcs: (parsed.npcs ?? []).map((n: NPC) => ({
           personality: '',
           memories: [],
           ...n,
@@ -43,51 +43,46 @@ class DataService implements IDataService {
     return this.data.worlds;
   }
 
-  async getEntityByRoute(type: BaseEntityType, id: string): Promise<any | null> {
+  async getEntityByRoute(type: BaseEntityType, id: string): Promise<BaseEntity | null> {
     await this.delay();
     const collection = this.getCollection(type);
-    return collection.find((e: any) => e.id === id) || null;
+    return collection.find(e => e.id === id) ?? null;
   }
 
-  async getChildren(_parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<any[]> {
+  async getChildren(_parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<BaseEntity[]> {
     await this.delay();
     const collection = this.getCollection(childType);
-    return collection.filter((e: any) => e.parentId === parentId);
+    // All child types (country, city, poi, npc) have parentId; World never appears as a child.
+    return collection.filter(e => (e as BaseEntity & { parentId: string }).parentId === parentId);
   }
 
-  async updateEntity(type: BaseEntityType, id: string, payload: Partial<any>): Promise<any> {
+  async updateEntity(type: BaseEntityType, id: string, payload: Record<string, unknown>): Promise<BaseEntity> {
     await this.delay();
     const collection = this.getCollection(type);
-    const index = collection.findIndex((e: any) => e.id === id);
+    const index = collection.findIndex(e => e.id === id);
     if (index >= 0) {
-      collection[index] = { ...collection[index], ...payload };
+      collection[index] = { ...collection[index], ...payload } as AnyEntity;
       this.save();
       return collection[index];
     }
     throw new Error('Entity not found');
   }
 
-  async createEntity(type: BaseEntityType, payload: Partial<any>): Promise<any> {
+  async createEntity(type: BaseEntityType, payload: Record<string, unknown>): Promise<BaseEntity> {
     await this.delay();
     const collection = this.getCollection(type);
 
     const newId = type.charAt(0) + Math.random().toString(36).substring(2, 9);
 
-    const defaults: Record<string, any> = {
-      world: { climate: '', magicLevel: '' },
+    const defaults: Record<BaseEntityType, Record<string, unknown>> = {
+      world:   { climate: '', magicLevel: '' },
       country: { governmentType: '', economy: '', populationSize: '' },
-      city: { populationSize: '', mainExport: '' },
-      poi: { dangerLevel: '', keyFeature: '' },
-      npc: { role: '', alignment: '', race: '', personality: '', memories: [] }
+      city:    { populationSize: '', mainExport: '' },
+      poi:     { dangerLevel: '', keyFeature: '' },
+      npc:     { role: '', alignment: '', race: '', personality: '', memories: [] },
     };
 
-    const newEntity = {
-      id: newId,
-      type,
-      ...(defaults[type] || {}),
-      ...payload
-    };
-
+    const newEntity = { id: newId, type, ...defaults[type], ...payload } as AnyEntity;
     collection.push(newEntity);
     this.save();
     return newEntity;
@@ -423,7 +418,7 @@ class DataService implements IDataService {
     return this.data.npcs.filter(n => poiIds.has(n.parentId));
   }
 
-  private getCollection(type: BaseEntityType): any[] {
+  private getCollection(type: BaseEntityType): AnyEntity[] {
     switch (type) {
       case 'world': return this.data.worlds;
       case 'country': return this.data.countries;

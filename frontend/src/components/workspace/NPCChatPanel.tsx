@@ -1,18 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Paper, Title, Group, Text, Button, TextInput, ScrollArea, Collapse, ActionIcon } from '@mantine/core';
+import { Paper, Title, Group, Text, Button, TextInput, ScrollArea, Collapse, ActionIcon, Select } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { MessageCircle, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronUp, Send, Mic, MicOff } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
-import { chatWithNPCTurn, summarizeConversation } from '../../data/AIService';
-import type { InventoryItem, PartyMember } from '../../data/mockData';
+import { chatWithNPCTurn, summarizeConversation, transcribeAudio } from '../../data/AIService';
+import type { AnyEntity, InventoryItem, NPC, PartyMember } from '../../data/mockData';
 
 interface NPCChatPanelProps {
-  entity: any;
-  parentChain: any[];
-  onMemoryAdded: (updated: any) => void;
+  entity: NPC;
+  parentChain: AnyEntity[];
+  onMemoryAdded: (updated: NPC) => void;
 }
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+  /** AI-safe speaker label: race + class only, no character name. Injected into the prompt. */
+  speaker?: string;
+  /** Display label shown in the chat UI: includes the character name when set. */
+  speakerDisplay?: string;
+};
+
+// Converts display messages to AI-ready history, injecting speaker context into user turns.
+function buildAIHistory(messages: Message[]): { role: 'user' | 'assistant'; content: string }[] {
+  return messages.map(msg => ({
+    role: msg.role,
+    content: msg.speaker ? `[${msg.speaker} speaks] ${msg.content}` : msg.content,
+  }));
+}
 
 export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
   entity, parentChain, onMemoryAdded,
@@ -24,10 +39,16 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
   const [isEnding, setIsEnding] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [party, setParty] = useState<PartyMember[]>([]);
+  const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const poi = parentChain[parentChain.length - 1];
   const worldId = parentChain[0]?.id;
+
   useEffect(() => {
     if (poi?.id) APIService.getInventory(poi.id).then(setInventory).catch(() => {});
   }, [poi?.id]);
@@ -41,18 +62,34 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
     }
   }, [messages, chatOpen]);
 
+
+  const getSpeaker = (memberId: string | null): { ai: string; display: string } | undefined => {
+    if (!memberId) return undefined;
+    const m = party.find(p => p.id === memberId);
+    if (!m) return undefined;
+    const ai = `${m.race} ${m.className}`;
+    const display = m.name ? `${m.name} (${m.race} ${m.className})` : ai;
+    return { ai, display };
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
-    const userMsg: Message = { role: 'user', content: input.trim() };
+    const speakerInfo = getSpeaker(selectedSpeakerId);
+    const userMsg: Message = {
+      role: 'user',
+      content: input.trim(),
+      speaker: speakerInfo?.ai,
+      speakerDisplay: speakerInfo?.display,
+    };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput('');
     setIsSending(true);
     try {
-      const reply = await chatWithNPCTurn(entity, next, parentChain, inventory, party);
+      const reply = await chatWithNPCTurn(entity, buildAIHistory(next), parentChain, inventory, party);
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch (e: any) {
-      notifications.show({ title: 'Chat error', message: e.message, color: 'deepRed' });
+    } catch (e: unknown) {
+      notifications.show({ title: 'Chat error', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
     setIsSending(false);
   };
@@ -61,17 +98,58 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
     if (messages.length === 0) { setChatOpen(false); return; }
     setIsEnding(true);
     try {
-      const diary = await summarizeConversation(entity, messages);
+      const diary = await summarizeConversation(entity, buildAIHistory(messages));
       await APIService.addNPCMemory(entity.id, diary);
       const updated = await APIService.getEntityByRoute('npc', entity.id);
-      if (updated) onMemoryAdded(updated);
-    } catch (e: any) {
-      notifications.show({ title: 'Could not save memory', message: e.message, color: 'deepRed' });
+      if (updated) onMemoryAdded(updated as NPC);
+    } catch (e: unknown) {
+      notifications.show({ title: 'Could not save memory', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
     setMessages([]);
     setChatOpen(false);
     setIsEnding(false);
   };
+
+  const toggleListening = async () => {
+    if (isListening) {
+      mediaRecorderRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setIsTranscribing(true);
+        try {
+          const transcript = await transcribeAudio(audioBlob);
+          setInput(transcript);
+        } catch (e: unknown) {
+          notifications.show({ title: 'Transcription failed', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
+        }
+        setIsTranscribing(false);
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (e: unknown) {
+      notifications.show({ title: 'Microphone error', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
+    }
+  };
+
+  const speakerOptions = party.map(m => ({
+    value: m.id,
+    label: m.name ? `${m.name} (${m.race} ${m.className})` : `${m.race} ${m.className}`,
+  }));
 
   return (
     <Paper mt="md" p="xl" radius="md">
@@ -83,7 +161,13 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
         <ActionIcon
           variant="subtle"
           color="brown"
-          onClick={() => setChatOpen(o => !o)}
+          onClick={() => {
+            if (chatOpen) {
+              mediaRecorderRef.current?.stop();
+              setIsListening(false);
+            }
+            setChatOpen(o => !o);
+          }}
         >
           {chatOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </ActionIcon>
@@ -100,9 +184,13 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
                 key={i}
                 style={{
                   display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  flexDirection: 'column',
+                  alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 }}
               >
+                {msg.role === 'user' && (msg.speakerDisplay ?? msg.speaker) && (
+                  <Text size="xs" c="dimmed" mb={2}>{msg.speakerDisplay ?? msg.speaker}</Text>
+                )}
                 <div
                   style={{
                     maxWidth: '75%',
@@ -127,13 +215,36 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
           </div>
         </ScrollArea>
 
+        {speakerOptions.length > 0 && (
+          <Select
+            mt="sm"
+            placeholder="Speaking as..."
+            data={speakerOptions}
+            value={selectedSpeakerId}
+            onChange={setSelectedSpeakerId}
+            clearable
+            size="xs"
+          />
+        )}
+
         <Group mt="sm" gap="xs">
+          <ActionIcon
+            variant={isListening ? 'filled' : 'subtle'}
+            color={isListening ? 'deepRed' : 'brown'}
+            size="lg"
+            onClick={toggleListening}
+            disabled={isSending || isEnding || isTranscribing}
+            title={isListening ? 'Stop recording' : 'Speak'}
+            loading={isTranscribing}
+          >
+            {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+          </ActionIcon>
           <TextInput
-            placeholder="Say something..."
+            placeholder={isListening ? 'Recording...' : isTranscribing ? 'Transcribing...' : 'Say something...'}
             value={input}
             onChange={e => setInput(e.currentTarget.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            disabled={isSending || isEnding}
+            disabled={isSending || isEnding || isTranscribing}
             style={{ flex: 1 }}
           />
           <Button

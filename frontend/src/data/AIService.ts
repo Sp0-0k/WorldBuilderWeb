@@ -15,14 +15,24 @@
  */
 
 import { notifications } from '@mantine/notifications';
-import type { BaseEntityType, InventoryItem, PartyMember } from './mockData';
+import type { AnyEntity, InventoryItem, NPC, NPCMemory, PartyMember, POI } from './mockData';
+
+interface OpenAIUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+}
+
+interface OpenAIErrorBody {
+  error?: { message?: string };
+}
 
 export type GeneratedEntity = Record<string, string>;
 export type GeneratedInventoryItem = Omit<InventoryItem, 'id' | 'poiId'>;
 
 // ── Usage notification ────────────────────────────────────────────────────────
 
-function showUsageNotification(label: string, usage: any) {
+function showUsageNotification(label: string, usage: OpenAIUsage | null | undefined) {
   if (!usage) return;
   const input  = usage.input_tokens  ?? '?';
   const output = usage.output_tokens ?? '?';
@@ -36,8 +46,8 @@ function showUsageNotification(label: string, usage: any) {
 }
 
 interface AncestorContext {
-  entity: any;          // the direct parent (e.g. city when creating a POI)
-  parentChain: any[];   // ancestors above the parent [world, country, ...]
+  entity: AnyEntity | null;   // the direct parent (e.g. city when creating a POI)
+  parentChain: AnyEntity[];   // ancestors above the parent [world, country, ...]
 }
 
 // ── JSON schemas for structured output ───────────────────────────────────────
@@ -79,9 +89,7 @@ function buildContextBlock(context: AncestorContext): string {
 
   for (const node of all) {
     if (!node) continue;
-    const type: BaseEntityType = node.type;
-
-    switch (type) {
+    switch (node.type) {
       case 'world':
         lines.push(`**World — ${node.name}**`);
         lines.push(node.description);
@@ -162,10 +170,8 @@ Generate a ${label} that satisfies the request above and feels like it genuinely
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(
-      (err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`,
-    );
+    const err = await response.json().catch(() => ({})) as OpenAIErrorBody;
+    throw new Error(err?.error?.message ?? `OpenAI request failed: ${response.status}`);
   }
 
   const data = await response.json();
@@ -188,7 +194,7 @@ const INVENTORY_SCHEMA = {
   properties: {
     items: {
       type: 'array',
-      description: 'Between 5 and 8 inventory items for this location',
+      description: 'The requested number of inventory items for this location',
       items: {
         type: 'object',
         properties: {
@@ -210,11 +216,15 @@ const INVENTORY_SCHEMA = {
  * Generate a thematic inventory for a POI.
  * `poi` is the POI entity itself; `context` provides its ancestor chain.
  * `party` is optional — when provided the AI tailors items to party level/composition.
+ * `count` controls how many new items to generate (default 5).
+ * `existingItems` is passed so the AI avoids duplicating items already in inventory.
  */
 export async function generateInventory(
-  poi: any,
+  poi: POI,
   context: AncestorContext,
   party: PartyMember[] = [],
+  count: number = 5,
+  existingItems: GeneratedInventoryItem[] = [],
 ): Promise<GeneratedInventoryItem[]> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
   if (!apiKey) {
@@ -254,8 +264,9 @@ LOCATION-AWARE INVENTORY RULES:
   Avoid magical items unless extremely appropriate.\
 
 STRICT RULES:\
-- Always return between 5 and 8 items.\
+- Return EXACTLY the number of items requested by the user.\
 - Match the inventory to the location's function, culture, and economic level.\
+- Do NOT duplicate any item that already exists in the inventory (existing items will be listed in the user message if any are present).\
 - For taverns and similar locations:\
   - Do NOT generate magical items, enchanted gear, or combat equipment.\
   - At most ONE item may be unusual, and it must still be non-magical.\
@@ -285,13 +296,17 @@ STYLE:
 - Keep descriptions to one sentence.
 - Focus on sensory detail, practicality, and cultural flavor rather than power.`;
 
+  const existingBlock = existingItems.length > 0
+    ? `\n### Existing Inventory (DO NOT duplicate these)\n${existingItems.map(i => `- ${i.name} (${i.rarity}): ${i.description}`).join('\n')}\n`
+    : '';
+
   const userMessage = `${ancestorBlock}
 
 **Location — ${poi.name}**
 ${poi.description}
 Danger Level: ${poi.dangerLevel || 'unspecified'} | Key Feature: ${poi.keyFeature || 'unspecified'}
-${partyBlock}
-Generate an inventory of 5–8 items that would realistically be found or sold at this location.`;
+${partyBlock}${existingBlock}
+Generate EXACTLY ${count} NEW item${count !== 1 ? 's' : ''} that would realistically be found or sold at this location. Do not repeat any existing items listed above.`;
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -317,10 +332,8 @@ Generate an inventory of 5–8 items that would realistically be found or sold a
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(
-      (err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`,
-    );
+    const err = await response.json().catch(() => ({})) as OpenAIErrorBody;
+    throw new Error(err?.error?.message ?? `OpenAI request failed: ${response.status}`);
   }
 
   const data = await response.json();
@@ -334,12 +347,114 @@ Generate an inventory of 5–8 items that would realistically be found or sold a
   return parsed.items;
 }
 
+// ── Audio Transcription ───────────────────────────────────────────────────────
+
+export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+  if (!apiKey) throw new Error('OpenAI API key not found.');
+
+  const formData = new FormData();
+  formData.append('file', audioBlob, 'recording.webm');
+  formData.append('model', 'gpt-4o-mini-transcribe');
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    // No Content-Type header — the browser sets it automatically with the multipart boundary.
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as OpenAIErrorBody)?.error?.message ?? `Transcription request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.text ?? '';
+}
+
+// ── NPC Response Validator ────────────────────────────────────────────────────
+
+// Returns null if the response is approved, or a feedback string describing the violation.
+async function validateNPCResponse(
+  draft: string,
+  npc: NPC,
+  contextBlock: string,
+  lastUserMessage: string,
+  apiKey: string,
+): Promise<string | null> {
+  try {
+    const systemPrompt = `You are a consistency checker for a tabletop RPG NPC dialogue system. \
+Your job is to detect factual overreach in a draft NPC response — nothing else.
+
+A violation is exactly one of these three things:
+1. KNOWLEDGE SCOPE: The NPC claims specific knowledge that their role and physical location \
+would not plausibly give them. A village innkeeper does not know what happened in the capital \
+last week. A blacksmith does not know the names of distant nobles or secret guild dealings. \
+General rumors and obvious regional news are fine — specific details about far-off or secret \
+events are not.
+2. ANACHRONISM: The NPC references concepts, objects, or phrases inconsistent with the \
+established technology and magic level of the world as described in the World Context.
+3. WORLD-FACT CONTRADICTION: The NPC states something that directly contradicts a named fact \
+in the World Context below (wrong government type, wrong climate, wrong city name, etc.).
+
+The following are NOT violations:
+- Creative elaboration, invented rumors, or speculation framed as uncertain ("I heard that...", "They say...")
+- Personality, dialect, mannerisms, and in-character voice
+- Mistakes or ignorance that fit the character's knowledge level
+- Any detail not explicitly contradicted by the World Context
+
+If the response contains no violations, output only the word: APPROVED
+If it contains a violation, output a single concise sentence describing exactly what is wrong \
+and what the NPC should avoid. Do not rewrite the response. Do not add headers or preamble.`;
+
+    const userMessage = `### NPC Character
+Name: ${npc.name}
+Race: ${npc.race || 'Unknown'}
+Role: ${npc.role || 'Unknown'}
+Alignment: ${npc.alignment || 'Unknown'}
+
+${contextBlock}
+
+### User Message That Prompted This Response (context only)
+${lastUserMessage}
+
+### Draft NPC Response to Validate
+${draft}`;
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-5.4-nano',
+        input: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    showUsageNotification('NPC validation', data.usage);
+
+    const trimmed = (data?.output?.[0]?.content?.[0]?.text ?? '').trim();
+    return (!trimmed || trimmed === 'APPROVED') ? null : trimmed;
+  } catch {
+    return null;
+  }
+}
+
 // ── NPC Chat ─────────────────────────────────────────────────────────────────
 
 export async function chatWithNPCTurn(
-  npc: any,
+  npc: NPC,
   history: { role: 'user' | 'assistant'; content: string }[],
-  parentChain: any[],
+  parentChain: AnyEntity[],
   inventory: InventoryItem[] = [],
   party: PartyMember[] = [],
 ): Promise<string> {
@@ -347,7 +462,7 @@ export async function chatWithNPCTurn(
   if (!apiKey) throw new Error('OpenAI API key not found.');
 
   const memoriesList = (npc.memories ?? [])
-    .map((m: any) => `- ${m.content}`)
+    .map((m: NPCMemory) => `- ${m.content}`)
     .join('\n') || 'None yet.';
 
   const inventoryBlock = inventory.length > 0
@@ -357,6 +472,9 @@ export async function chatWithNPCTurn(
   const partyBlock = party.length > 0
     ? `\n### The Party\nYou are speaking with a group of adventurers, not a single person. From what you can observe, the group includes:\n${party.map(m => `- A ${m.race || 'unknown-race'} ${m.className}`).join('\n')}\nYou do not know any of their names unless they tell you during conversation. React to them as a group. If an adventurer gives you a name, use it — but do not invent names for them.`
     : '';
+
+  const contextBlock = buildContextBlock({ entity: parentChain[parentChain.length - 1], parentChain: parentChain.slice(0, -1) });
+  const lastUserMessage = history[history.length - 1]?.content ?? '';
 
   const systemPrompt = `You are roleplaying as ${npc.name}, a character in a fantasy world. \
 Stay in character at all times. Speak and respond exactly as this character would, using their \
@@ -379,7 +497,7 @@ Personality & Quirks: ${npc.personality || 'Not specified.'}
 ${memoriesList}
 ${inventoryBlock}
 ${partyBlock}
-${buildContextBlock({ entity: parentChain[parentChain.length - 1], parentChain: parentChain.slice(0, -1) })}`;
+${contextBlock}`;
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -398,7 +516,7 @@ ${buildContextBlock({ entity: parentChain[parentChain.length - 1], parentChain: 
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error((err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`);
+    throw new Error((err as OpenAIErrorBody)?.error?.message ?? `OpenAI request failed: ${response.status}`);
   }
 
   const data = await response.json();
@@ -406,11 +524,47 @@ ${buildContextBlock({ entity: parentChain[parentChain.length - 1], parentChain: 
 
   const text: string = data?.output?.[0]?.content?.[0]?.text;
   if (!text) throw new Error('Unexpected response shape from OpenAI Responses API.');
-  return text;
+
+  const feedback = await validateNPCResponse(text, npc, contextBlock, lastUserMessage, apiKey);
+  if (!feedback) return text;
+
+  // Validator found an issue — retry once with the draft and feedback injected so the NPC
+  // agent can self-correct while keeping its own voice.
+  const retryResponse = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-5.4-nano',
+      input: [
+        { role: 'system', content: systemPrompt },
+        ...history,
+        { role: 'assistant', content: text },
+        { role: 'user', content: `[INTERNAL CORRECTION — not part of the conversation] Your previous response was flagged: ${feedback} Please respond again to the original message, correcting only that issue and otherwise staying fully in character.` },
+      ],
+    }),
+  });
+
+  if (!retryResponse.ok) return text;
+
+  const retryData = await retryResponse.json();
+  showUsageNotification('NPC retry', retryData.usage);
+
+  const corrected: string = retryData?.output?.[0]?.content?.[0]?.text;
+  if (!corrected) return text;
+
+  // Second validation pass — if the retry still fails, return a safe in-character fallback
+  // rather than letting a hallucinated response through.
+  const secondFeedback = await validateNPCResponse(corrected, npc, contextBlock, lastUserMessage, apiKey);
+  if (!secondFeedback) return corrected;
+
+  return `I wouldn't know anything about that, I'm afraid.`;
 }
 
 export async function summarizeConversation(
-  npc: any,
+  npc: NPC,
   history: { role: 'user' | 'assistant'; content: string }[],
 ): Promise<string> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
@@ -443,7 +597,7 @@ Be specific. Write only the diary entry — no title, no preamble.`;
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error((err as any)?.error?.message ?? `OpenAI request failed: ${response.status}`);
+    throw new Error((err as OpenAIErrorBody)?.error?.message ?? `OpenAI request failed: ${response.status}`);
   }
 
   const data = await response.json();

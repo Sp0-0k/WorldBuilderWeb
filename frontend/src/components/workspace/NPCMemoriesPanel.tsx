@@ -3,12 +3,12 @@ import { Paper, Title, Text, Group, Stack, ActionIcon, Textarea, Button } from '
 import { notifications } from '@mantine/notifications';
 import { ScrollText, Check, Trash2, Plus } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
-import type { NPCMemory } from '../../data/mockData';
+import type { NPC, NPCMemory } from '../../data/mockData';
 
 interface NPCMemoriesPanelProps {
-  entity: any;
+  entity: NPC;
   isEditing: boolean;
-  onMemoriesChange: (updated: any) => void;
+  onMemoriesChange: (updated: NPC) => void;
 }
 
 export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
@@ -26,7 +26,7 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
 
   const refresh = async () => {
     const updated = await APIService.getEntityByRoute('npc', entity.id);
-    if (updated) onMemoriesChange(updated);
+    if (updated) onMemoriesChange(updated as NPC);
   };
 
   const handleSaveEdit = async (memId: string, originalCreatedAt: string) => {
@@ -42,8 +42,8 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
       await refresh();
       setEditValues(prev => { const next = { ...prev }; delete next[memId]; return next; });
       setEditDates(prev => { const next = { ...prev }; delete next[memId]; return next; });
-    } catch (e: any) {
-      notifications.show({ title: 'Save failed', message: e.message, color: 'deepRed' });
+    } catch (e: unknown) {
+      notifications.show({ title: 'Save failed', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
     setSaving(null);
   };
@@ -53,8 +53,8 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
     try {
       await APIService.deleteNPCMemory(entity.id, memId);
       await refresh();
-    } catch (e: any) {
-      notifications.show({ title: 'Delete failed', message: e.message, color: 'deepRed' });
+    } catch (e: unknown) {
+      notifications.show({ title: 'Delete failed', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
     setSaving(null);
   };
@@ -67,8 +67,8 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
       await refresh();
       setNewContent('');
       setShowAdd(false);
-    } catch (e: any) {
-      notifications.show({ title: 'Add failed', message: e.message, color: 'deepRed' });
+    } catch (e: unknown) {
+      notifications.show({ title: 'Add failed', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
     setSaving(null);
   };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Title, Text, Group, Button, Stack, TextInput, Textarea } from '@mantine/core';
 import { Edit2, Save, X } from 'lucide-react';
-import type { BaseEntityType } from '../../data/mockData';
+import type { AnyEntity, BaseEntityType } from '../../data/mockData';
 import { SCHEMA_FIELDS } from '../../data/mockData';
 import { dataService as APIService } from '../../data/dataService';
 import { POIInventoryPanel } from './POIInventoryPanel';
@@ -11,11 +11,11 @@ import { NPCMemoriesPanel } from './NPCMemoriesPanel';
 import { NPCChatPanel } from './NPCChatPanel';
 
 interface EntityEditorProps {
-  entity: any;
-  onSave: (entity: any) => void;
+  entity: AnyEntity;
+  onSave: (entity: AnyEntity) => void;
   onEditingChange?: (isEditing: boolean) => void;
   /** Ancestor chain passed down to POIInventoryPanel for AI context. */
-  parentChain?: any[];
+  parentChain?: AnyEntity[];
 }
 
 export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEditingChange, parentChain = [] }) => {
@@ -25,12 +25,15 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
     setIsEditing(val);
     onEditingChange?.(val);
   };
-  const [draft, setDraft] = useState(entity);
+  const [draft, setDraft] = useState<AnyEntity>(entity);
   const [isSaving, setIsSaving] = useState(false);
+  const draftRecord = draft as Record<string, unknown>;
 
   useEffect(() => {
-    setDraft(entity);
-    setEditing(false);
+    queueMicrotask(() => {
+      setDraft(entity);
+      setEditing(false);
+    });
   }, [entity.id]); // Reset only when navigating to a different entity, not on field updates
 
   const handleSave = async () => {
@@ -39,15 +42,15 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
       // Only save fields that EntityEditor manages to avoid overwriting
       // relation fields (keyFactionIds, factionIds) managed by their own panels.
       const schemaKeys = SCHEMA_FIELDS[entity.type as BaseEntityType] ?? [];
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         name: draft.name,
         description: draft.description,
       };
       for (const key of schemaKeys) {
-        payload[key] = draft[key];
+        payload[key] = draftRecord[key];
       }
       const updated = await APIService.updateEntity(entity.type as BaseEntityType, entity.id, payload);
-      onSave(updated);
+      onSave(updated as AnyEntity);
       setEditing(false);
     } catch (e) {
       console.error(e);
@@ -69,7 +72,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
               value={draft.name}
               onChange={(e) => {
                 const val = e.currentTarget.value;
-                setDraft((prev: any) => ({ ...prev, name: val }));
+                setDraft(prev => ({ ...prev, name: val }) as AnyEntity);
               }}
               size="lg"
               styles={{ input: { fontFamily: 'var(--mantine-font-family-headings)', fontWeight: 700, fontSize: 24 } }}
@@ -97,7 +100,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
               value={draft.description}
               onChange={(e) => {
                 const val = e.currentTarget.value;
-                setDraft((prev: any) => ({ ...prev, description: val }));
+                setDraft(prev => ({ ...prev, description: val }) as AnyEntity);
               }}
               minRows={4}
               autosize
@@ -112,8 +115,9 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
           <Group grow align="flex-start">
             {SCHEMA_FIELDS[entity.type as BaseEntityType]?.filter(key => key !== 'personality').map(key => {
               const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-              const val = draft[key] || '';
-              const shouldRenderView = !isEditing && entity[key] && entity[key].toString().trim() !== '';
+              const entityRecord = entity as Record<string, unknown>;
+              const val = (draftRecord[key] as string) || '';
+              const shouldRenderView = !isEditing && entityRecord[key] && String(entityRecord[key]).trim() !== '';
 
               if (isEditing) {
                 return (
@@ -123,7 +127,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
                     value={val}
                     onChange={e => {
                       const newVal = e.currentTarget.value;
-                      setDraft((prev: any) => ({ ...prev, [key]: newVal }));
+                      setDraft(prev => ({ ...prev, [key]: newVal }) as AnyEntity);
                     }}
                   />
                 );
@@ -133,7 +137,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
                 return (
                   <div key={key}>
                     <Text size="xs" tt="uppercase" c="dimmed" fw={600}>{label}</Text>
-                    <Text>{entity[key]}</Text>
+                    <Text>{String(entityRecord[key])}</Text>
                   </div>
                 );
               }
@@ -147,18 +151,18 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
               <Textarea
                 key="personality"
                 label="Personality & Quirks"
-                value={draft['personality'] || ''}
+                value={(draftRecord['personality'] as string) || ''}
                 onChange={e => {
                   const newVal = e.currentTarget.value;
-                  setDraft((prev: any) => ({ ...prev, personality: newVal }));
+                  setDraft(prev => ({ ...prev, personality: newVal }) as AnyEntity);
                 }}
                 minRows={3}
                 autosize
               />
-            ) : (entity['personality'] && entity['personality'].toString().trim() !== '') ? (
+            ) : ((entity as Record<string, unknown>)['personality'] && String((entity as Record<string, unknown>)['personality']).trim() !== '') ? (
               <div key="personality">
                 <Text size="xs" tt="uppercase" c="dimmed" fw={600}>Personality & Quirks</Text>
-                <Text>{entity['personality']}</Text>
+                <Text>{String((entity as Record<string, unknown>)['personality'])}</Text>
               </div>
             ) : null
           )}

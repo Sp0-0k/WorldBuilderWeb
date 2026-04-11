@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Paper, Title, Text, Group, Button, Stack, Badge, ActionIcon,
-  TextInput, Textarea, Select, Divider, Modal, Switch,
+  TextInput, Textarea, Select, Divider, NumberInput, Switch,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Plus, Pencil, Trash2, Wand2, Check, X, GripVertical } from 'lucide-react';
@@ -23,7 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { dataService as APIService } from '../../data/dataService';
 import { generateInventory } from '../../data/AIService';
-import type { InventoryItem, PartyMember } from '../../data/mockData';
+import type { AnyEntity, InventoryItem, PartyMember, POI } from '../../data/mockData';
 
 // ── Rarity colours ────────────────────────────────────────────────────────────
 
@@ -38,11 +38,11 @@ const RARITY_COLORS: Record<string, string> = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface POIInventoryPanelProps {
-  entity: any;
+  entity: POI;
   isEditing: boolean;
-  parentChain: any[];
+  parentChain: AnyEntity[];
   /** Called after inventoryEnabled is toggled so the parent's entity state stays in sync. */
-  onEntityUpdate: (updated: any) => void;
+  onEntityUpdate: (updated: POI) => void;
 }
 
 interface EditingItem {
@@ -196,7 +196,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
 
   // AI generation
   const [generating, setGenerating] = useState(false);
-  const [confirmModal, setConfirmModal] = useState(false);
+  const [generateCount, setGenerateCount] = useState<number>(5);
   const [party, setParty] = useState<PartyMember[]>([]);
 
   // Toggle state — mirrors entity.inventoryEnabled
@@ -205,7 +205,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
 
   // Keep enabled in sync if parent entity prop changes
   useEffect(() => {
-    setEnabled(!!entity.inventoryEnabled);
+    queueMicrotask(() => setEnabled(!!entity.inventoryEnabled));
   }, [entity.inventoryEnabled]);
 
   useEffect(() => {
@@ -214,9 +214,9 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
   }, [parentChain]);
 
   useEffect(() => {
-    if (!enabled) { setLoading(false); return; }
+    if (!enabled) { queueMicrotask(() => setLoading(false)); return; }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     APIService.getInventory(entity.id).then(data => {
       if (!cancelled) { setItems(data); setLoading(false); }
     });
@@ -296,75 +296,69 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
   // ── AI Generation ────────────────────────────────────────────────────────────
 
   const runGenerate = async () => {
-    setConfirmModal(false);
     setGenerating(true);
     try {
-      const generated = await generateInventory(entity, { entity: null, parentChain }, party);
-      const saved = await APIService.replaceInventory(entity.id, generated);
-      setItems(saved);
+      const generated = await generateInventory(
+        entity,
+        { entity: null, parentChain },
+        party,
+        generateCount,
+        items,
+      );
+      const saved = await Promise.all(
+        generated.map(item => APIService.addInventoryItem({ ...item, poiId: entity.id }))
+      );
+      setItems(prev => [...prev, ...saved]);
       notifications.show({
-        title: 'Inventory Generated!',
-        message: `${saved.length} items added to ${entity.name}`,
+        title: 'Items Generated!',
+        message: `${saved.length} item${saved.length !== 1 ? 's' : ''} added to ${entity.name}`,
         color: 'gold',
         icon: <Wand2 size={16} />,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       notifications.show({
         title: 'Generation failed',
-        message: err?.message ?? 'Something went wrong. Check your API key.',
+        message: err instanceof Error ? err.message : 'Something went wrong. Check your API key.',
         color: 'red',
       });
     }
     setGenerating(false);
   };
 
-  const handleGenerateClick = () => {
-    if (items.length > 0) setConfirmModal(true);
-    else runGenerate();
-  };
-
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Confirm overwrite modal */}
-      <Modal
-        opened={confirmModal}
-        onClose={() => setConfirmModal(false)}
-        title="Replace Inventory?"
-        centered
-        size="sm"
-        styles={{ title: { fontFamily: 'var(--mantine-font-family-headings)', color: 'var(--mantine-color-gold-4)' } }}
-      >
-        <Text size="sm" mb="lg">
-          This will replace all {items.length} existing item{items.length !== 1 ? 's' : ''} with
-          AI-generated ones. This cannot be undone.
-        </Text>
-        <Group justify="flex-end">
-          <Button variant="subtle" color="gray" onClick={() => setConfirmModal(false)}>Cancel</Button>
-          <Button color="gold" leftSection={<Wand2 size={16} />} onClick={runGenerate}>
-            Generate Anyway
-          </Button>
-        </Group>
-      </Modal>
-
       <Paper mt="xl" p="xl" radius="md">
         {/* Header */}
         <Group justify="space-between" mb={enabled ? 'md' : 0}>
           <Title order={3} ff="heading" c="gold.4">Inventory</Title>
           <Group gap="sm">
-            {/* Generate button — edit mode only */}
+            {/* Generate controls — edit mode only */}
             {isEditing && enabled && (
-              <Button
-                variant="light"
-                color="gold"
-                size="sm"
-                leftSection={<Wand2 size={16} />}
-                loading={generating}
-                onClick={handleGenerateClick}
-              >
-                Generate Inventory
-              </Button>
+              <Group gap="xs">
+                <NumberInput
+                  size="xs"
+                  min={1}
+                  max={10}
+                  value={generateCount}
+                  onChange={v => setGenerateCount(typeof v === 'number' ? v : 5)}
+                  w={64}
+                  allowDecimal={false}
+                  hideControls={false}
+                  styles={{ input: { textAlign: 'center' } }}
+                />
+                <Button
+                  variant="light"
+                  color="gold"
+                  size="sm"
+                  leftSection={<Wand2 size={16} />}
+                  loading={generating}
+                  onClick={runGenerate}
+                >
+                  Generate Items
+                </Button>
+              </Group>
             )}
             {/* Enable/disable toggle — edit mode only */}
             {isEditing && (

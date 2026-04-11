@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Paper, Title, Group, Text, Badge, Stack, Button, Select, TextInput, ActionIcon } from '@mantine/core';
 import { Plus, X, Shield } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
-import type { Faction } from '../../data/mockData';
+import type { Faction, NPC } from '../../data/mockData';
 
 interface NPCFactionsPanelProps {
-  entity: any;
+  entity: NPC;
   isEditing: boolean;
   worldId: string;
-  onEntityUpdate: (updated: any) => void;
+  onEntityUpdate: (updated: NPC) => void;
 }
 
 export const NPCFactionsPanel: React.FC<NPCFactionsPanelProps> = ({
@@ -27,9 +27,11 @@ export const NPCFactionsPanel: React.FC<NPCFactionsPanelProps> = ({
   }, [worldId]);
 
   useEffect(() => {
-    setShowAdd(false);
-    setAddFactionId('');
-    setAddRole('');
+    queueMicrotask(() => {
+      setShowAdd(false);
+      setAddFactionId('');
+      setAddRole('');
+    });
   }, [entity.id]);
 
   // Derive memberships from faction.members (authoritative source for roles)

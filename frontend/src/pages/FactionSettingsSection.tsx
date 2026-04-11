@@ -31,7 +31,7 @@ export const FactionSettingsSection: React.FC<Props> = ({ worldId }) => {
   const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     Promise.all([
       APIService.getFactions(worldId),
       APIService.getCitiesForWorld(worldId),

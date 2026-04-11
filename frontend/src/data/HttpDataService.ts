@@ -53,20 +53,20 @@ export class HttpDataService implements IDataService {
 
   // ── Entities ─────────────────────────────────────────────────────────────────
 
-  getEntityByRoute(type: BaseEntityType, id: string): Promise<any | null> {
-    return req(`/entities/${type}/${id}`).catch(() => null);
+  getEntityByRoute(type: BaseEntityType, id: string): Promise<BaseEntity | null> {
+    return req<BaseEntity>(`/entities/${type}/${id}`).catch(() => null);
   }
 
-  getChildren(parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<any[]> {
-    return req(`/entities/${parentType}/${parentId}/children/${childType}`);
+  getChildren(parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<BaseEntity[]> {
+    return req<BaseEntity[]>(`/entities/${parentType}/${parentId}/children/${childType}`);
   }
 
-  createEntity(type: BaseEntityType, payload: Partial<any>): Promise<any> {
-    return post(`/entities/${type}`, payload);
+  createEntity(type: BaseEntityType, payload: Record<string, unknown>): Promise<BaseEntity> {
+    return post<BaseEntity>(`/entities/${type}`, payload);
   }
 
-  updateEntity(type: BaseEntityType, id: string, payload: Partial<any>): Promise<any> {
-    return patch(`/entities/${type}/${id}`, payload);
+  updateEntity(type: BaseEntityType, id: string, payload: Record<string, unknown>): Promise<BaseEntity> {
+    return patch<BaseEntity>(`/entities/${type}/${id}`, payload);
   }
 
   deleteEntity(type: BaseEntityType, id: string): Promise<void> {

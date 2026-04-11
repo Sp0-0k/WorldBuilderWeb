@@ -15,7 +15,6 @@ export const WorldsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchWorlds = () => {
-    setLoading(true);
     APIService.getWorlds()
       .then(setWorlds)
       .finally(() => setLoading(false));
@@ -25,7 +24,7 @@ export const WorldsPage: React.FC = () => {
     fetchWorlds();
   }, []);
 
-  const handleCreateWorld = async (data: any) => {
+  const handleCreateWorld = async (data: Record<string, string>) => {
     setSaving(true);
     try {
       const newWorld = await APIService.createEntity('world', data);

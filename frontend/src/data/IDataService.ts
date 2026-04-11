@@ -3,6 +3,8 @@ import type {
   Faction, InventoryItem, NPCMemory, PartyMember, World,
 } from './mockData';
 
+type EntityPayload = Record<string, unknown>;
+
 /**
  * Shared contract for all data service implementations.
  * Swap between MockDataService (localStorage) and HttpDataService (REST API)
@@ -13,10 +15,10 @@ export interface IDataService {
   getWorlds(): Promise<World[]>;
 
   // ── Entities ─────────────────────────────────────────────────────────────────
-  getEntityByRoute(type: BaseEntityType, id: string): Promise<any | null>;
-  getChildren(parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<any[]>;
-  createEntity(type: BaseEntityType, payload: Partial<any>): Promise<any>;
-  updateEntity(type: BaseEntityType, id: string, payload: Partial<any>): Promise<any>;
+  getEntityByRoute(type: BaseEntityType, id: string): Promise<BaseEntity | null>;
+  getChildren(parentType: BaseEntityType, parentId: string, childType: BaseEntityType): Promise<BaseEntity[]>;
+  createEntity(type: BaseEntityType, payload: EntityPayload): Promise<BaseEntity>;
+  updateEntity(type: BaseEntityType, id: string, payload: EntityPayload): Promise<BaseEntity>;
   deleteEntity(type: BaseEntityType, id: string): Promise<void>;
 
   // ── Inventory ────────────────────────────────────────────────────────────────
