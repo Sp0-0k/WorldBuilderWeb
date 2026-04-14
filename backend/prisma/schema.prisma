@@ -111,6 +111,7 @@ model InventoryItem {
   poiId       String   @db.Char(36)
   name        String
   description String?  @db.Text
+  stats       String?  @db.Text
   price       String   @default("")
   rarity      String   @default("Common")
   sortOrder   Int      @default(0)

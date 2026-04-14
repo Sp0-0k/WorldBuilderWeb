@@ -72,8 +72,9 @@ const NPC_SCHEMA = {
     role:        { type: 'string', description: 'Their occupation or role in the world, e.g. Blacksmith, Spy, Merchant' },
     alignment:   { type: 'string', description: 'D&D alignment, e.g. Lawful Good, Chaotic Neutral' },
     race:        { type: 'string', description: 'Their race, e.g. Human, Elf, Dwarf' },
+    personality: { type: 'string', description: 'A short phrase capturing their personality and quirks, e.g. Gruff but loyal, speaks in riddles' },
   },
-  required: ['name', 'description', 'role', 'alignment', 'race'],
+  required: ['name', 'description', 'role', 'alignment', 'race', 'personality'],
   additionalProperties: false,
 } as const;
 
@@ -199,11 +200,12 @@ const INVENTORY_SCHEMA = {
         type: 'object',
         properties: {
           name:        { type: 'string', description: 'Item name' },
-          description: { type: 'string', description: 'One sentence describing the item and its use or lore' },
+          description: { type: 'string', description: 'One sentence of flavor or lore — appearance, origin, or cultural detail. No mechanical stats here.' },
+          stats:       { type: ['string', 'null'], description: 'D&D 5.5e mechanical stats line for weapons and armor (e.g. "1d8 slashing, versatile (1d10)" or "AC 14 + Dex mod (max 2)" or "1d6 piercing + 1d6 fire, requires attunement"). Use null for mundane non-combat items like food, tools, or clothing.' },
           price:       { type: 'string', description: 'Cost in D&D currency, e.g. "5 gp", "2 sp", "10 cp"' },
           rarity:      { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary'] },
         },
-        required: ['name', 'description', 'price', 'rarity'],
+        required: ['name', 'description', 'stats', 'price', 'rarity'],
         additionalProperties: false,
       },
     },
@@ -253,6 +255,13 @@ LOCATION-AWARE INVENTORY RULES:
   Include a mix of mostly mundane items with a small number of interesting or magical items. \
   You may include up to two homebrewed items. \
 
+- Weapon shops, armories, smithies, bowyers, and combat-focused locations: \
+  Inventory consists primarily of weapons, armor, and combat equipment matching the shop's specialty. \
+  A swordsmith sells swords, daggers, and blades — not generic goods. A bowyer sells bows and arrows. \
+  AT LEAST 70% of items must be the shop's core product type. \
+  Maintenance supplies (oils, scabbards, whetstones) may appear but must be a minority. \
+  Magical weapons and armor are appropriate here; you may include up to two magic items. \
+
 - Taverns, inns, and food-based locations: \
   Inventory consists of menu items (food and drink) and simple services.\
   These should make up AT LEAST 80% of the items.\
@@ -270,7 +279,7 @@ STRICT RULES:\
 - For taverns and similar locations:\
   - Do NOT generate magical items, enchanted gear, or combat equipment.\
   - At most ONE item may be unusual, and it must still be non-magical.\
-- Do NOT default to weapons, potions, or adventuring gear unless the location clearly supports it.\
+- For non-combat locations (taverns, libraries, temples, homes): do NOT generate weapons, potions, or adventuring gear. For weapon shops and smithies, weapons ARE the primary inventory — generate them freely.\
 
 PRICING GUIDELINES: \
 
@@ -353,8 +362,12 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
   if (!apiKey) throw new Error('OpenAI API key not found.');
 
+  const ext = audioBlob.type.includes('mp4') ? 'mp4'
+    : audioBlob.type.includes('ogg') ? 'ogg'
+    : audioBlob.type.includes('wav') ? 'wav'
+    : 'webm';
   const formData = new FormData();
-  formData.append('file', audioBlob, 'recording.webm');
+  formData.append('file', audioBlob, `recording.${ext}`);
   formData.append('model', 'gpt-4o-mini-transcribe');
 
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -451,12 +464,20 @@ ${draft}`;
 
 // ── NPC Chat ─────────────────────────────────────────────────────────────────
 
+export interface NPCFactionContext {
+  name: string;
+  description: string;
+  powerLevel?: string;
+  role?: string;
+}
+
 export async function chatWithNPCTurn(
   npc: NPC,
   history: { role: 'user' | 'assistant'; content: string }[],
   parentChain: AnyEntity[],
   inventory: InventoryItem[] = [],
   party: PartyMember[] = [],
+  factions: NPCFactionContext[] = [],
 ): Promise<string> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
   if (!apiKey) throw new Error('OpenAI API key not found.');
@@ -464,6 +485,14 @@ export async function chatWithNPCTurn(
   const memoriesList = (npc.memories ?? [])
     .map((m: NPCMemory) => `- ${m.content}`)
     .join('\n') || 'None yet.';
+
+  const factionsBlock = factions.length > 0
+    ? `\n### Faction Memberships\nThis character is a member of the following factions. They are aware of these allegiances and can speak about them in character — though they may choose to be secretive depending on their alignment and personality.\n${factions.map(f => {
+        const roleStr = f.role ? ` (Role: ${f.role})` : '';
+        const powerStr = f.powerLevel ? ` [${f.powerLevel}]` : '';
+        return `- **${f.name}**${powerStr}${roleStr}: ${f.description}`;
+      }).join('\n')}`
+    : '';
 
   const inventoryBlock = inventory.length > 0
     ? `\n### Location Inventory\nThese are the items available at your location. You know about them and can discuss, sell, or reference them naturally.\n${inventory.map(i => `- ${i.name} (${i.rarity}, ${i.price}): ${i.description}`).join('\n')}`
@@ -495,6 +524,7 @@ Personality & Quirks: ${npc.personality || 'Not specified.'}
 
 ### Memories (things this character remembers)
 ${memoriesList}
+${factionsBlock}
 ${inventoryBlock}
 ${partyBlock}
 ${contextBlock}`;

@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { dataService as APIService } from '../data/dataService';
+import { useDebug } from '../contexts/DebugContext';
 import type { AnyEntity, BaseEntity, BaseEntityType } from '../data/mockData';
 import { getChildType, getParentType } from '../data/mockData';
 import { BreadcrumbHeader } from '../components/workspace/BreadcrumbHeader';
@@ -13,6 +14,7 @@ import { WorkspaceSidebar } from '../components/layout/WorkspaceSidebar';
 import { CreateEntityModal } from '../components/workspace/CreateEntityModal';
 
 export const EntityWorkspace: React.FC = () => {
+  const { debugMode } = useDebug();
   const { type, id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
 
@@ -106,7 +108,7 @@ export const EntityWorkspace: React.FC = () => {
       setChildren(prev => prev.filter(c => c.id !== deletingChild.id));
       setDeletingChild(null);
     } catch (e) {
-      console.error(e);
+      if (debugMode) console.error(e);
     }
     setIsDeleting(false);
   };
@@ -119,7 +121,7 @@ export const EntityWorkspace: React.FC = () => {
       setModalOpened(false);
       setChildren(prev => [...prev, newChild]);
     } catch (e) {
-      console.error(e);
+      if (debugMode) console.error(e);
     }
     setSaving(false);
   };

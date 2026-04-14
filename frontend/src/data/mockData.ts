@@ -92,6 +92,7 @@ export interface InventoryItem {
   poiId: string;
   name: string;
   description: string;
+  stats?: string | null;  // D&D mechanical line, e.g. "1d8 slashing, versatile (1d10)"
   price: string;    // e.g. "5 gp", "2 sp", "priceless"
   rarity: string;   // Common | Uncommon | Rare | Very Rare | Legendary
 }

@@ -4,6 +4,7 @@ import { Edit2, Save, X } from 'lucide-react';
 import type { AnyEntity, BaseEntityType } from '../../data/mockData';
 import { SCHEMA_FIELDS } from '../../data/mockData';
 import { dataService as APIService } from '../../data/dataService';
+import { useDebug } from '../../contexts/DebugContext';
 import { POIInventoryPanel } from './POIInventoryPanel';
 import { CityFactionsPanel } from './CityFactionsPanel';
 import { NPCFactionsPanel } from './NPCFactionsPanel';
@@ -19,6 +20,7 @@ interface EntityEditorProps {
 }
 
 export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEditingChange, parentChain = [] }) => {
+  const { debugMode } = useDebug();
   const [isEditing, setIsEditing] = useState(false);
 
   const setEditing = (val: boolean) => {
@@ -53,7 +55,7 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ entity, onSave, onEd
       onSave(updated as AnyEntity);
       setEditing(false);
     } catch (e) {
-      console.error(e);
+      if (debugMode) console.error(e);
     }
     setIsSaving(false);
   };

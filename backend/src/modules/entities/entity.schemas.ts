@@ -14,10 +14,10 @@ export const CreateCountrySchema = z.object({
 
 export const UpdateCountrySchema = z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  governmentType: z.string().optional(),
-  economy: z.string().optional(),
-  populationSize: z.string().optional(),
+  description: z.string().nullish(),
+  governmentType: z.string().nullish(),
+  economy: z.string().nullish(),
+  populationSize: z.string().nullish(),
 })
 
 export const CreateCitySchema = z.object({
@@ -30,9 +30,9 @@ export const CreateCitySchema = z.object({
 
 export const UpdateCitySchema = z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  populationSize: z.string().optional(),
-  mainExport: z.string().optional(),
+  description: z.string().nullish(),
+  populationSize: z.string().nullish(),
+  mainExport: z.string().nullish(),
 })
 
 export const CreatePOISchema = z.object({
@@ -46,9 +46,9 @@ export const CreatePOISchema = z.object({
 
 export const UpdatePOISchema = z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  dangerLevel: z.string().optional(),
-  keyFeature: z.string().optional(),
+  description: z.string().nullish(),
+  dangerLevel: z.string().nullish(),
+  keyFeature: z.string().nullish(),
   inventoryEnabled: z.boolean().optional(),
 })
 
@@ -64,11 +64,11 @@ export const CreateNPCSchema = z.object({
 
 export const UpdateNPCSchema = z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  role: z.string().optional(),
-  alignment: z.string().optional(),
-  race: z.string().optional(),
-  personality: z.string().optional(),
+  description: z.string().nullish(),
+  role: z.string().nullish(),
+  alignment: z.string().nullish(),
+  race: z.string().nullish(),
+  personality: z.string().nullish(),
 })
 
 export type CreateCountryInput = z.infer<typeof CreateCountrySchema>

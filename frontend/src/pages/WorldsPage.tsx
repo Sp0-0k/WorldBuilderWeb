@@ -14,9 +14,11 @@ import { useNavigate } from "react-router-dom";
 import { FantasyCard } from "../components/primitives/FantasyCard";
 import { CreateEntityModal } from "../components/workspace/CreateEntityModal";
 import { dataService as APIService } from "../data/dataService";
+import { useDebug } from "../contexts/DebugContext";
 import type { World } from "../data/mockData";
 
 export const WorldsPage: React.FC = () => {
+  const { debugMode } = useDebug();
   const [worlds, setWorlds] = useState<World[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpened, setModalOpened] = useState(false);
@@ -42,7 +44,7 @@ export const WorldsPage: React.FC = () => {
       setModalOpened(false);
       navigate(`/view/world/${newWorld.id}`);
     } catch (e) {
-      console.error(e);
+      if (debugMode) console.error(e);
     }
     setSaving(false);
   };
@@ -57,7 +59,7 @@ export const WorldsPage: React.FC = () => {
       );
       setDeletingWorld(null);
     } catch (e) {
-      console.error(e);
+      if (debugMode) console.error(e);
     }
     setDeleting(false);
   };

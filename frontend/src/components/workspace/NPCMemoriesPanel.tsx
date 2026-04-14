@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Paper, Title, Text, Group, Stack, ActionIcon, Textarea, Button } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { ScrollText, Check, Trash2, Plus } from 'lucide-react';
+import { ScrollText, Check, Trash2, Plus, Pencil, X } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
 import type { NPC, NPCMemory } from '../../data/mockData';
 
@@ -16,6 +16,7 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
 }) => {
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editDates, setEditDates] = useState<Record<string, string>>({});
+  const [activeEdits, setActiveEdits] = useState<Set<string>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
@@ -24,13 +25,22 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
+  const openEdit = (memId: string) =>
+    setActiveEdits(prev => new Set(prev).add(memId));
+
+  const closeEdit = (memId: string) => {
+    setActiveEdits(prev => { const next = new Set(prev); next.delete(memId); return next; });
+    setEditValues(prev => { const next = { ...prev }; delete next[memId]; return next; });
+    setEditDates(prev => { const next = { ...prev }; delete next[memId]; return next; });
+  };
+
   const refresh = async () => {
     const updated = await APIService.getEntityByRoute('npc', entity.id);
     if (updated) onMemoriesChange(updated as NPC);
   };
 
-  const handleSaveEdit = async (memId: string, originalCreatedAt: string) => {
-    const content = editValues[memId];
+  const handleSaveEdit = async (memId: string, originalCreatedAt: string, originalContent: string) => {
+    const content = editValues[memId] ?? originalContent;
     if (!content?.trim()) return;
     const dateVal = editDates[memId];
     const createdAt = dateVal
@@ -40,8 +50,7 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
     try {
       await APIService.updateNPCMemory(entity.id, memId, content.trim(), createdAt);
       await refresh();
-      setEditValues(prev => { const next = { ...prev }; delete next[memId]; return next; });
-      setEditDates(prev => { const next = { ...prev }; delete next[memId]; return next; });
+      closeEdit(memId);
     } catch (e: unknown) {
       notifications.show({ title: 'Save failed', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
     }
@@ -92,7 +101,7 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
           const editVal = editValues[mem.id] ?? mem.content;
           const editDate = editDates[mem.id] ?? new Date(mem.createdAt).toISOString().slice(0, 10);
 
-          if (isEditing) {
+          if (isEditing && activeEdits.has(mem.id)) {
             return (
               <Stack key={mem.id} gap="xs">
                 <Group gap="xs" align="center">
@@ -121,7 +130,7 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
                   <ActionIcon
                     color="forestGreen"
                     variant="filled"
-                    onClick={() => handleSaveEdit(mem.id, mem.createdAt)}
+                    onClick={() => handleSaveEdit(mem.id, mem.createdAt, mem.content)}
                     loading={saving === mem.id}
                     disabled={saving !== null}
                   >
@@ -129,12 +138,11 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
                   </ActionIcon>
                   <ActionIcon
                     color="deepRed"
-                    variant="filled"
-                    onClick={() => handleDelete(mem.id)}
-                    loading={saving === mem.id + '-del'}
+                    variant="subtle"
+                    onClick={() => closeEdit(mem.id)}
                     disabled={saving !== null}
                   >
-                    <Trash2 size={14} />
+                    <X size={14} />
                   </ActionIcon>
                 </Group>
               </Stack>
@@ -144,7 +152,19 @@ export const NPCMemoriesPanel: React.FC<NPCMemoriesPanelProps> = ({
           return (
             <div key={mem.id}>
               <Text size="xs" c="dimmed" mb={2}>{dateStr}</Text>
-              <Text size="sm">{mem.content}</Text>
+              <Group justify="space-between" align="flex-start" wrap="nowrap">
+                <Text size="sm" style={{ flex: 1 }}>{mem.content}</Text>
+                {isEditing && (
+                  <Group gap={4} wrap="nowrap">
+                    <ActionIcon variant="subtle" color="brown" size="sm" onClick={() => openEdit(mem.id)} disabled={saving !== null}>
+                      <Pencil size={13} />
+                    </ActionIcon>
+                    <ActionIcon variant="subtle" color="deepRed" size="sm" onClick={() => handleDelete(mem.id)} loading={saving === mem.id + '-del'} disabled={saving !== null}>
+                      <Trash2 size={13} />
+                    </ActionIcon>
+                  </Group>
+                )}
+              </Group>
             </div>
           );
         })}

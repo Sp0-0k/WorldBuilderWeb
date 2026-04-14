@@ -4,9 +4,11 @@ import { LandingPage } from './pages/LandingPage';
 import { WorldsPage } from './pages/WorldsPage';
 import { EntityWorkspace } from './pages/EntityWorkspace';
 import { AuthProvider } from './contexts/AuthContext';
+import { DebugProvider } from './contexts/DebugContext';
 
 function App() {
   return (
+    <DebugProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -16,6 +18,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </DebugProvider>
   )
 }
 

@@ -62,14 +62,17 @@ export class HttpDataService implements IDataService {
   }
 
   createEntity(type: BaseEntityType, payload: Record<string, unknown>): Promise<BaseEntity> {
+    if (type === 'world') return post<BaseEntity>('/worlds', payload);
     return post<BaseEntity>(`/entities/${type}`, payload);
   }
 
   updateEntity(type: BaseEntityType, id: string, payload: Record<string, unknown>): Promise<BaseEntity> {
+    if (type === 'world') return patch<BaseEntity>(`/worlds/${id}`, payload);
     return patch<BaseEntity>(`/entities/${type}/${id}`, payload);
   }
 
   deleteEntity(type: BaseEntityType, id: string): Promise<void> {
+    if (type === 'world') return del(`/worlds/${id}`);
     return del(`/entities/${type}/${id}`);
   }
 

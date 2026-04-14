@@ -1,4 +1,5 @@
 import { FastifyReply } from 'fastify'
+import { ZodError } from 'zod'
 
 export class AppError extends Error {
   constructor(
@@ -34,6 +35,9 @@ export class ConflictError extends AppError {
 export function sendError(reply: FastifyReply, err: unknown): FastifyReply {
   if (err instanceof AppError) {
     return reply.status(err.statusCode).send({ error: err.message })
+  }
+  if (err instanceof ZodError) {
+    return reply.status(400).send({ error: err.issues[0]?.message ?? 'Validation error' })
   }
   return reply.status(500).send({ error: 'Internal server error' })
 }

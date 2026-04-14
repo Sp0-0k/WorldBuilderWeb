@@ -23,6 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { dataService as APIService } from '../../data/dataService';
 import { generateInventory } from '../../data/AIService';
+import { useDebug } from '../../contexts/DebugContext';
 import type { AnyEntity, InventoryItem, PartyMember, POI } from '../../data/mockData';
 
 // ── Rarity colours ────────────────────────────────────────────────────────────
@@ -48,11 +49,12 @@ interface POIInventoryPanelProps {
 interface EditingItem {
   name: string;
   description: string;
+  stats: string;
   price: string;
   rarity: string;
 }
 
-const BLANK_ITEM: EditingItem = { name: '', description: '', price: '', rarity: 'Common' };
+const BLANK_ITEM: EditingItem = { name: '', description: '', stats: '', price: '', rarity: 'Common' };
 
 // ── Sortable item row ─────────────────────────────────────────────────────────
 
@@ -115,11 +117,17 @@ const SortableRow: React.FC<SortableRowProps> = ({
             </Group>
             <Textarea
               size="xs"
-              placeholder="Description"
+              placeholder="Flavor / lore description"
               value={editDraft.description}
               onChange={e => onEditDraftChange({ ...editDraft, description: e.currentTarget.value })}
               minRows={2}
               autosize
+            />
+            <TextInput
+              size="xs"
+              placeholder="Stats (e.g. 1d8 slashing, versatile (1d10)) — leave blank for non-combat items"
+              value={editDraft.stats}
+              onChange={e => onEditDraftChange({ ...editDraft, stats: e.currentTarget.value })}
             />
             <Group justify="flex-end" gap="xs">
               <ActionIcon variant="subtle" color="gray" size="sm" onClick={onCancelEdit}>
@@ -157,6 +165,9 @@ const SortableRow: React.FC<SortableRowProps> = ({
                 </Badge>
                 <Text size="xs" c="gold.4" style={{ whiteSpace: 'nowrap' }}>{item.price}</Text>
               </Group>
+              {item.stats && (
+                <Text size="xs" c="brown.3" ff="monospace">{item.stats}</Text>
+              )}
               <Text size="xs" c="dimmed" lineClamp={2}>{item.description}</Text>
             </Stack>
 
@@ -182,6 +193,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
 export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
   entity, isEditing, parentChain, onEntityUpdate,
 }) => {
+  const { debugMode } = useDebug();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -236,7 +248,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
       const updated = await APIService.updateEntity('poi', entity.id, { inventoryEnabled: next });
       setEnabled(next);
       onEntityUpdate(updated);
-    } catch (e) { console.error(e); }
+    } catch (e) { if (debugMode) console.error(e); }
     setToggling(false);
   };
 
@@ -250,7 +262,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
       setItems(prev => [...prev, created]);
       setNewItem(BLANK_ITEM);
       setAddingItem(false);
-    } catch (e) { console.error(e); }
+    } catch (e) { if (debugMode) console.error(e); }
     setAddingSaving(false);
   };
 
@@ -258,7 +270,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
 
   const startEdit = (item: InventoryItem) => {
     setEditingId(item.id);
-    setEditDraft({ name: item.name, description: item.description, price: item.price, rarity: item.rarity });
+    setEditDraft({ name: item.name, description: item.description, stats: item.stats ?? '', price: item.price, rarity: item.rarity });
   };
 
   const handleEditSave = async (id: string) => {
@@ -266,7 +278,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
       const updated = await APIService.updateInventoryItem(id, editDraft);
       setItems(prev => prev.map(i => i.id === id ? updated : i));
       setEditingId(null);
-    } catch (e) { console.error(e); }
+    } catch (e) { if (debugMode) console.error(e); }
   };
 
   // ── Delete ──────────────────────────────────────────────────────────────────
@@ -275,7 +287,7 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
     try {
       await APIService.deleteInventoryItem(id);
       setItems(prev => prev.filter(i => i.id !== id));
-    } catch (e) { console.error(e); }
+    } catch (e) { if (debugMode) console.error(e); }
   };
 
   // ── Drag to reorder ─────────────────────────────────────────────────────────
@@ -455,11 +467,17 @@ export const POIInventoryPanel: React.FC<POIInventoryPanelProps> = ({
                         </Group>
                         <Textarea
                           size="xs"
-                          placeholder="Brief description…"
+                          placeholder="Flavor / lore description…"
                           value={newItem.description}
                           onChange={e => setNewItem({ ...newItem, description: e.currentTarget.value })}
                           minRows={2}
                           autosize
+                        />
+                        <TextInput
+                          size="xs"
+                          placeholder="Stats (e.g. 1d8 slashing, versatile (1d10)) — leave blank for non-combat items"
+                          value={newItem.stats}
+                          onChange={e => setNewItem({ ...newItem, stats: e.currentTarget.value })}
                         />
                         <Group justify="flex-end" gap="xs">
                           <Button size="xs" variant="subtle" color="gray"

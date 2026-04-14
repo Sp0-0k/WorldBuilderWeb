@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications';
 import { MessageCircle, ChevronDown, ChevronUp, Send, Mic, MicOff } from 'lucide-react';
 import { dataService as APIService } from '../../data/dataService';
 import { chatWithNPCTurn, summarizeConversation, transcribeAudio } from '../../data/AIService';
-import type { AnyEntity, InventoryItem, NPC, PartyMember } from '../../data/mockData';
+import type { AnyEntity, Faction, InventoryItem, NPC, PartyMember } from '../../data/mockData';
 
 interface NPCChatPanelProps {
   entity: NPC;
@@ -39,6 +39,7 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
   const [isEnding, setIsEnding] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [party, setParty] = useState<PartyMember[]>([]);
+  const [allFactions, setAllFactions] = useState<Faction[]>([]);
   const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -54,6 +55,9 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
   }, [poi?.id]);
   useEffect(() => {
     if (worldId) APIService.getParty(worldId).then(setParty).catch(() => {});
+  }, [worldId]);
+  useEffect(() => {
+    if (worldId) APIService.getFactions(worldId).then(setAllFactions).catch(() => {});
   }, [worldId]);
 
   useEffect(() => {
@@ -86,7 +90,15 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
     setInput('');
     setIsSending(true);
     try {
-      const reply = await chatWithNPCTurn(entity, buildAIHistory(next), parentChain, inventory, party);
+      const npcFactions = allFactions
+        .filter(f => f.members.some(m => m.npcId === entity.id))
+        .map(f => ({
+          name: f.name,
+          description: f.description,
+          powerLevel: f.powerLevel,
+          role: f.members.find(m => m.npcId === entity.id)?.role ?? undefined,
+        }));
+      const reply = await chatWithNPCTurn(entity, buildAIHistory(next), parentChain, inventory, party, npcFactions);
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (e: unknown) {
       notifications.show({ title: 'Chat error', message: e instanceof Error ? e.message : String(e), color: 'deepRed' });
@@ -118,7 +130,8 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(t => MediaRecorder.isTypeSupported(t)) ?? '';
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = e => {
@@ -127,7 +140,8 @@ export const NPCChatPanel: React.FC<NPCChatPanelProps> = ({
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blobType = mimeType || mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
         setIsTranscribing(true);
         try {
           const transcript = await transcribeAudio(audioBlob);
