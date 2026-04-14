@@ -26,6 +26,7 @@ The backend is organized by capability under `backend/src/modules`:
 - pins
 - factions
 - search
+- memories
 
 Each module presents a focused API surface, while the world/entity hierarchy provides a shared model backbone.
 
@@ -42,6 +43,7 @@ Each module presents a focused API surface, while the world/entity hierarchy pro
 - Server bootstrap/listen: [backend/src/server.ts](../backend/src/server.ts#L1-L17)
 - Runtime environment map: [backend/src/config/env.ts](../backend/src/config/env.ts#L1-L7)
 - Example route wiring (worlds): [backend/src/modules/worlds/worlds.routes.ts](../backend/src/modules/worlds/worlds.routes.ts#L1-L18)
+- Example route wiring (memories): [backend/src/modules/memories/memories.routes.ts](../backend/src/modules/memories/memories.routes.ts#L1-L18)
 - Example controller validation/error handling: [backend/src/modules/worlds/worlds.controller.ts](../backend/src/modules/worlds/worlds.controller.ts#L1-L63)
 - Example service orchestration: [backend/src/modules/worlds/worlds.service.ts](../backend/src/modules/worlds/worlds.service.ts#L1-L56)
 - Example repository persistence layer: [backend/src/modules/worlds/worlds.repository.ts](../backend/src/modules/worlds/worlds.repository.ts#L1-L48)

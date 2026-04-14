@@ -98,6 +98,34 @@ Current modules under `backend/src/modules` include:
 - Data service mode selection: [frontend/src/data/dataService.ts](../frontend/src/data/dataService.ts#L1-L11)
 - Frontend auth context: [frontend/src/contexts/AuthContext.tsx](../frontend/src/contexts/AuthContext.tsx#L1-L34)
 
+## Implementation truth matrix
+
+Use this as a quick contract map when updating architecture/spec docs.
+
+| Concern | Source of truth |
+|---|---|
+| Backend app composition and mounted modules | [backend/src/app.ts](../backend/src/app.ts#L1-L50) |
+| Frontend route model and entry flow (`/` -> `/worlds` -> `/view/:type/:id`) | [frontend/src/App.tsx](../frontend/src/App.tsx#L1-L22), [frontend/src/pages/LandingPage.tsx](../frontend/src/pages/LandingPage.tsx#L1-L69) |
+| Frontend/backend data contract surface | [frontend/src/data/IDataService.ts](../frontend/src/data/IDataService.ts#L1-L73), [frontend/src/data/HttpDataService.ts](../frontend/src/data/HttpDataService.ts#L1-L196) |
+| Persistence model and relational constraints | [backend/prisma/schema.prisma](../backend/prisma/schema.prisma#L1-L201) |
+| Session/auth behavior scope | [frontend/src/contexts/AuthContext.tsx](../frontend/src/contexts/AuthContext.tsx#L1-L34), [backend/src/app.ts](../backend/src/app.ts#L1-L50) |
+
+## Documentation governance
+
+### Precedence
+
+When documentation conflicts, use this order:
+
+1. [README.md](../README.md)
+2. `overview/*` architecture docs
+3. Code references in the implementation truth matrix above
+
+### Update cadence
+
+- Update docs in the same PR as backend route/module changes or `IDataService` contract changes.
+- Re-run a stale-claim text check before merging docs updates.
+- Keep planning and prompt files non-canonical; they can inform work but should not override `README.md` or `overview/*`.
+
 ## Related docs
 
 - [Backend architecture](backend-architecture.md)

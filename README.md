@@ -18,6 +18,15 @@ The app includes:
 - Optional AI-assisted generation for POIs, NPCs, and inventory.
 - NPC chat — roleplay conversations with NPCs using full world context, with sessions automatically summarised into persistent diary-entry memories.
 
+## Major features
+
+- **Hierarchical world editor:** navigate and edit `World -> Country -> City -> POI -> NPC` with a guarded edit mode.
+- **World-scoped sidebar systems:** debounced search, lazy-loading world tree, and per-world pins for quick navigation.
+- **Gameplay context systems:** party management plus faction management (including NPC memberships and city-faction links).
+- **Inventory workflows:** POI-level inventory CRUD, reorder, and replace flows (including AI-assisted generation).
+- **NPC interaction + memory loop:** in-context NPC chat with persistent NPC memories.
+- **Dual data access modes:** switch between HTTP mode (`HttpDataService`) and Mock mode (`MockDataService`) via env config.
+
 ## Tech stack
 
 - **Frontend:** React, TypeScript, Vite, Mantine
